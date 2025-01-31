@@ -14,6 +14,7 @@ This project is a highly scalable and distributed **URL Shortener Service** depl
 | **Documentation** | All Members |
 
 ## System Architecture
+<img src="architecture.png" alt="System Architecture" width="800">
 Our URL Shortener service follows a **distributed microservices architecture** with the following components:
 
 1. **Frontend (Web Application UI)**: Built by frontend developers, allowing users to enter URLs for shortening and retrieving analytics.
