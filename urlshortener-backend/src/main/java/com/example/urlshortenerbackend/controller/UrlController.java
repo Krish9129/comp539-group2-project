@@ -26,9 +26,10 @@ public class UrlController {
     @PostMapping("/shorten")
     public ResponseEntity<Map<String, String>> shortenUrl(
             @RequestParam String url,
-            @RequestParam(required = false) String alias) {
+            @RequestParam(required = false) String alias,
+            @RequestParam(required = false) String tag) {
         try {
-            String shortId = urlService.createShortUrl(url, alias);
+            String shortId = urlService.createShortUrl(url, alias, tag);
             Map<String, String> response = new HashMap<>();
             response.put("shortId", shortId);
             response.put("shortUrl", "localhost:8080/api/" + shortId);
@@ -89,7 +90,6 @@ public class UrlController {
     }
 
 
-
     @DeleteMapping("/{id}")
     public ResponseEntity<Map<String, String>> deleteUrl(@PathVariable String id) {
         try {
@@ -102,5 +102,14 @@ public class UrlController {
             error.put("error", "Failed to delete URL");
             return ResponseEntity.badRequest().body(error);
         }
+    }
+
+    @GetMapping("/urls")
+    public ResponseEntity<?> getUrlsByTag(@RequestParam String tag) {
+        List<UrlEntity> urls = urlService.getUrlsByTag(tag);
+        if (urls.isEmpty()) {
+            return ResponseEntity.ok(Map.of("message", "No URLs found for this tag"));
+        }
+        return ResponseEntity.ok(urls);
     }
 }

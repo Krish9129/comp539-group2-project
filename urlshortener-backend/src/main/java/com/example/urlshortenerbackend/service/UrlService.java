@@ -28,7 +28,7 @@ public class UrlService {
         this.bigtableRepository = bigtableRepository;
     }
 
-    public String createShortUrl(String originalUrl, String alias) {
+    public String createShortUrl(String originalUrl, String alias, String tag) {
         String id;
 
         // If alias is provided, check if it's unique
@@ -45,6 +45,7 @@ public class UrlService {
         }
 
         long createdAt = Instant.now().getEpochSecond();
+        String finalTag = (tag != null && !tag.isEmpty()) ? tag : "None";
 
         UrlEntity urlEntity = new UrlEntity();
         urlEntity.setId(id);
@@ -52,6 +53,7 @@ public class UrlService {
         urlEntity.setCreatedAt(createdAt);
         urlEntity.setClickCount(0);
         urlEntity.setLastAccess(Instant.now().toString());
+        urlEntity.setTag(finalTag);
 
         // Save to Bigtable
         bigtableRepository.saveUrl(urlEntity);
@@ -63,7 +65,7 @@ public class UrlService {
 
         for (String url : urls) {
             try {
-                String shortId = createShortUrl(url, null); // No custom alias
+                String shortId = createShortUrl(url, null, null); // No custom alias
                 shortenedUrls.put(url, shortId);
             } catch (Exception e) {
                 shortenedUrls.put(url, "Error generating short URL");
@@ -96,5 +98,9 @@ public class UrlService {
         ByteArrayOutputStream pngOutputStream = new ByteArrayOutputStream();
         MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream);
         return pngOutputStream.toByteArray();
+    }
+
+    public List<UrlEntity> getUrlsByTag(String tag) {
+        return bigtableRepository.getUrlsByTag(tag);
     }
 }

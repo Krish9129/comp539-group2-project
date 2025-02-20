@@ -11,7 +11,8 @@ public class UrlEntity {
     // basic info
     private String id;                // shortURL ID
     private String originalUrl;       // original URL
-    private long createdAt;          // created time
+    private long createdAt;           // created time
+    private String tag;               // tag for each URL
 
     // analysis data
     private long clickCount;         // click count
@@ -62,4 +63,9 @@ public class UrlEntity {
     public void setLastAccess(String lastAccess) {
         this.lastAccess = lastAccess;
     }
+
+    // Getter and Setter for tag
+    public String getTag() { return tag;}
+
+    public void setTag(String tag) { this.tag = tag;}
 }
