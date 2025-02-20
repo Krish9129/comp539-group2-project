@@ -77,8 +77,7 @@ public class BigtableRepository {
         bigtableClient.mutateRow(RowMutation.create(TABLE_NAME, id).deleteRow());
     }
 
-    public boolean aliasExists(String alias) {
-        return getUrlById(alias).isPresent();
+    public boolean shortIdExists(String shortId) {
+        return getUrlById(shortId).isPresent(); // Returns true if ID exists in the database
     }
-
 }

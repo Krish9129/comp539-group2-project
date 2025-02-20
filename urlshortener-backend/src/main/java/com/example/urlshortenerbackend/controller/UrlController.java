@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api")
@@ -20,21 +21,6 @@ public class UrlController {
         this.urlService = urlService;
     }
 
-//    @PostMapping("/shorten")
-//    public ResponseEntity<Map<String, String>> shortenUrl(@RequestParam String url) {
-//        try {
-//            String shortId = urlService.createShortUrl(url);
-//            Map<String, String> response = new HashMap<>();
-//            response.put("shortId", shortId);
-//            response.put("shortUrl", "/api/" + shortId);
-//            return ResponseEntity.ok(response);
-//        } catch (Exception e) {
-//            Map<String, String> error = new HashMap<>();
-//            error.put("error", "Failed to create short URL");
-//            return ResponseEntity.badRequest().body(error);
-//        }
-//    }
-
     @PostMapping("/shorten")
     public ResponseEntity<Map<String, String>> shortenUrl(
             @RequestParam String url,
@@ -45,10 +31,24 @@ public class UrlController {
             response.put("shortId", shortId);
             response.put("shortUrl", "localhost:8080/api/" + shortId);
             return ResponseEntity.ok(response);
+        } catch(IllegalArgumentException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Alias already in use. Please choose a different one.");
+            return ResponseEntity.badRequest().body(error);
         } catch (Exception e) {
             Map<String, String> error = new HashMap<>();
             error.put("error", "Failed to create short URL");
             return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    @PostMapping("/bulk-shorten")
+    public ResponseEntity<Map<String, Object>> bulkShortenUrls(@RequestBody List<String> urls) {
+        try {
+            Map<String, String> shortenedUrls = urlService.bulkShorten(urls);
+            return ResponseEntity.ok(Map.of("shortened_urls", shortenedUrls));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Failed to create short URL(s)"));
         }
     }
 

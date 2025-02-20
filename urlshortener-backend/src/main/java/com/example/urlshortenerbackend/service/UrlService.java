@@ -6,6 +6,10 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.List;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class UrlService {
@@ -16,27 +20,20 @@ public class UrlService {
         this.bigtableRepository = bigtableRepository;
     }
 
-//    public String createShortUrl(String originalUrl) {
-//        String id = generateShortId(originalUrl);
-//        long createdAt = Instant.now().getEpochSecond();
-//
-//        UrlEntity urlEntity = new UrlEntity();
-//        urlEntity.setId(id);
-//        urlEntity.setOriginalUrl(originalUrl);
-//        urlEntity.setCreatedAt(createdAt);
-//        urlEntity.setClickCount(0);
-//        urlEntity.setLastAccess(Instant.now().toString());
-//
-//        bigtableRepository.saveUrl(urlEntity);
-//        return id;
-//    }
-
     public String createShortUrl(String originalUrl, String alias) {
-        String id = (alias != null && !alias.isEmpty()) ? alias : generateShortId(originalUrl);
+        String id;
 
-        // Check if the alias already exists
-        if (bigtableRepository.aliasExists(id)) {
-            throw new IllegalArgumentException("Alias already in use. Please choose a different one.");
+        // If alias is provided, check if it's unique
+        if (alias != null && !alias.isEmpty()) {
+            if (bigtableRepository.shortIdExists(alias)) {
+                throw new IllegalArgumentException("Alias already in use. Please choose a different one.");
+            }
+            id = alias;
+        } else {
+            // Generate unique short ID
+            do {
+                id = generateShortId(originalUrl);
+            } while (bigtableRepository.shortIdExists(id)); // Keep generating until unique
         }
 
         long createdAt = Instant.now().getEpochSecond();
@@ -53,6 +50,19 @@ public class UrlService {
         return id;
     }
 
+    public Map<String, String> bulkShorten(List<String> urls) {
+        Map<String, String> shortenedUrls = new HashMap<>();
+
+        for (String url : urls) {
+            try {
+                String shortId = createShortUrl(url, null); // No custom alias
+                shortenedUrls.put(url, shortId);
+            } catch (Exception e) {
+                shortenedUrls.put(url, "Error generating short URL");
+            }
+        }
+        return shortenedUrls;
+    }
 
     public Optional<String> getLongUrl(String id) {
         Optional<UrlEntity> urlEntity = bigtableRepository.getUrlById(id);
