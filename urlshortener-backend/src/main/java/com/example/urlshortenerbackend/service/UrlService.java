@@ -60,15 +60,17 @@ public class UrlService {
         return id;
     }
 
-    public Map<String, String> bulkShorten(List<String> urls) {
+    public Map<String, String> bulkShorten(List<Map<String, String>> urls) {
         Map<String, String> shortenedUrls = new HashMap<>();
 
-        for (String url : urls) {
+        for (Map<String, String> url : urls) {
             try {
-                String shortId = createShortUrl(url, null, null); // No custom alias
-                shortenedUrls.put(url, shortId);
+                String originalUrl = url.get("url");
+                String tag = url.getOrDefault("tag", "None");
+                String shortId = createShortUrl(originalUrl, null, tag); // No custom alias
+                shortenedUrls.put(originalUrl, shortId);
             } catch (Exception e) {
-                shortenedUrls.put(url, "Error generating short URL");
+                shortenedUrls.put("error", "Error generating short URL");
             }
         }
         return shortenedUrls;

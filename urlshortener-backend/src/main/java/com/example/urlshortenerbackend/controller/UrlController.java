@@ -46,7 +46,7 @@ public class UrlController {
     }
 
     @PostMapping("/bulk-shorten")
-    public ResponseEntity<Map<String, Object>> bulkShortenUrls(@RequestBody List<String> urls) {
+    public ResponseEntity<Map<String, Object>> bulkShortenUrls(@RequestBody List<Map<String, String>> urls) {
         try {
             Map<String, String> shortenedUrls = urlService.bulkShorten(urls);
             return ResponseEntity.ok(Map.of("shortened_urls", shortenedUrls));
@@ -54,7 +54,6 @@ public class UrlController {
             return ResponseEntity.badRequest().body(Map.of("error", "Failed to create short URL(s)"));
         }
     }
-
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getLongUrl(@PathVariable String id) {
