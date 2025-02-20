@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+## Main Resource File
+/src/main/resources/team2-service-account-key.json
+
