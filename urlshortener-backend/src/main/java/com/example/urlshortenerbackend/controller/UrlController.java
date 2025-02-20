@@ -20,13 +20,30 @@ public class UrlController {
         this.urlService = urlService;
     }
 
+//    @PostMapping("/shorten")
+//    public ResponseEntity<Map<String, String>> shortenUrl(@RequestParam String url) {
+//        try {
+//            String shortId = urlService.createShortUrl(url);
+//            Map<String, String> response = new HashMap<>();
+//            response.put("shortId", shortId);
+//            response.put("shortUrl", "/api/" + shortId);
+//            return ResponseEntity.ok(response);
+//        } catch (Exception e) {
+//            Map<String, String> error = new HashMap<>();
+//            error.put("error", "Failed to create short URL");
+//            return ResponseEntity.badRequest().body(error);
+//        }
+//    }
+
     @PostMapping("/shorten")
-    public ResponseEntity<Map<String, String>> shortenUrl(@RequestParam String url) {
+    public ResponseEntity<Map<String, String>> shortenUrl(
+            @RequestParam String url,
+            @RequestParam(required = false) String alias) {
         try {
-            String shortId = urlService.createShortUrl(url);
+            String shortId = urlService.createShortUrl(url, alias);
             Map<String, String> response = new HashMap<>();
             response.put("shortId", shortId);
-            response.put("shortUrl", "/api/" + shortId);
+            response.put("shortUrl", "localhost:8080/api/" + shortId);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             Map<String, String> error = new HashMap<>();
@@ -34,6 +51,7 @@ public class UrlController {
             return ResponseEntity.badRequest().body(error);
         }
     }
+
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getLongUrl(@PathVariable String id) {

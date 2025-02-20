@@ -16,8 +16,29 @@ public class UrlService {
         this.bigtableRepository = bigtableRepository;
     }
 
-    public String createShortUrl(String originalUrl) {
-        String id = generateShortId(originalUrl);
+//    public String createShortUrl(String originalUrl) {
+//        String id = generateShortId(originalUrl);
+//        long createdAt = Instant.now().getEpochSecond();
+//
+//        UrlEntity urlEntity = new UrlEntity();
+//        urlEntity.setId(id);
+//        urlEntity.setOriginalUrl(originalUrl);
+//        urlEntity.setCreatedAt(createdAt);
+//        urlEntity.setClickCount(0);
+//        urlEntity.setLastAccess(Instant.now().toString());
+//
+//        bigtableRepository.saveUrl(urlEntity);
+//        return id;
+//    }
+
+    public String createShortUrl(String originalUrl, String alias) {
+        String id = (alias != null && !alias.isEmpty()) ? alias : generateShortId(originalUrl);
+
+        // Check if the alias already exists
+        if (bigtableRepository.aliasExists(id)) {
+            throw new IllegalArgumentException("Alias already in use. Please choose a different one.");
+        }
+
         long createdAt = Instant.now().getEpochSecond();
 
         UrlEntity urlEntity = new UrlEntity();
@@ -27,9 +48,11 @@ public class UrlService {
         urlEntity.setClickCount(0);
         urlEntity.setLastAccess(Instant.now().toString());
 
+        // Save to Bigtable
         bigtableRepository.saveUrl(urlEntity);
         return id;
     }
+
 
     public Optional<String> getLongUrl(String id) {
         Optional<UrlEntity> urlEntity = bigtableRepository.getUrlById(id);

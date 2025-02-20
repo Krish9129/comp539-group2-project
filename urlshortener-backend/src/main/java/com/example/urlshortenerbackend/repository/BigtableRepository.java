@@ -76,4 +76,9 @@ public class BigtableRepository {
     public void deleteUrl(String id) {
         bigtableClient.mutateRow(RowMutation.create(TABLE_NAME, id).deleteRow());
     }
+
+    public boolean aliasExists(String alias) {
+        return getUrlById(alias).isPresent();
+    }
+
 }
