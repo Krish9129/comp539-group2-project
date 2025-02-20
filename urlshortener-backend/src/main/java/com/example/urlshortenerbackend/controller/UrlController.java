@@ -4,6 +4,8 @@ import com.example.urlshortenerbackend.model.UrlEntity;
 import com.example.urlshortenerbackend.service.UrlService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.MediaType;
+import java.util.Base64;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -67,6 +69,26 @@ public class UrlController {
             return ResponseEntity.notFound().build();
         }
     }
+
+    @GetMapping("/{shortId}/qr")
+    public ResponseEntity<?> getQrCode(@PathVariable String shortId) {
+        try {
+            String shortUrl = "http://localhost:8080/" + shortId; // Base URL + short ID
+            byte[] qrCode = urlService.generateQrCode(shortUrl, 300, 300);
+
+            // Return as an image
+            return ResponseEntity.ok()
+                    .contentType(MediaType.IMAGE_PNG) // Ensure proper content type
+                    .body(qrCode);
+
+        } catch (Exception e) {
+            // Return error as JSON
+            return ResponseEntity.badRequest().contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("error", "Failed to generate QR Code"));
+        }
+    }
+
+
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Map<String, String>> deleteUrl(@PathVariable String id) {
