@@ -29,6 +29,10 @@ public class UrlService {
     }
 
     public String createShortUrl(String originalUrl, String alias, String tag) {
+        return createShortUrl(originalUrl, alias, tag, null, false);
+    }
+
+    public String createShortUrl(String originalUrl, String alias, String tag, String ownerId, boolean isPrivate) {
         String id;
 
         // If alias is provided, check if it's unique
@@ -54,23 +58,26 @@ public class UrlService {
         urlEntity.setClickCount(0);
         urlEntity.setLastAccess(Instant.now().toString());
         urlEntity.setTag(finalTag);
+        urlEntity.setOwnerId(ownerId);
+        urlEntity.setPrivate(isPrivate);
 
         // Save to Bigtable
         bigtableRepository.saveUrl(urlEntity);
         return id;
     }
 
-    public Map<String, String> bulkShorten(List<Map<String, String>> urls) {
+    public Map<String, String> bulkShorten(List<Map<String, String>> urls, String ownerId) {
         Map<String, String> shortenedUrls = new HashMap<>();
 
         for (Map<String, String> url : urls) {
             try {
                 String originalUrl = url.get("url");
                 String tag = url.getOrDefault("tag", "None");
-                String shortId = createShortUrl(originalUrl, null, tag); // No custom alias
+                boolean isPrivate = Boolean.parseBoolean(url.getOrDefault("isPrivate", "false"));
+                String shortId = createShortUrl(originalUrl, null, tag, ownerId, isPrivate);
                 shortenedUrls.put(originalUrl, shortId);
             } catch (Exception e) {
-                shortenedUrls.put("error", "Error generating short URL");
+                shortenedUrls.put(url.get("url"), "Error: " + e.getMessage());
             }
         }
         return shortenedUrls;
@@ -85,8 +92,25 @@ public class UrlService {
         return Optional.empty();
     }
 
-    public void deleteShortUrl(String id) {
-        bigtableRepository.deleteUrl(id);
+    // 添加缺失的 getUrlById 方法
+    public Optional<UrlEntity> getUrlById(String id) {
+        return bigtableRepository.getUrlById(id);
+    }
+
+    public void deleteShortUrl(String id, String ownerId) {
+        Optional<UrlEntity> urlEntity = bigtableRepository.getUrlById(id);
+        if (urlEntity.isPresent()) {
+            UrlEntity entity = urlEntity.get();
+
+            // Check if user owns this URL
+            if (entity.getOwnerId() != null && !entity.getOwnerId().equals(ownerId)) {
+                throw new SecurityException("You do not have permission to delete this URL");
+            }
+
+            bigtableRepository.deleteUrl(id);
+        } else {
+            throw new IllegalArgumentException("URL not found");
+        }
     }
 
     private String generateShortId(String url) {
@@ -104,5 +128,13 @@ public class UrlService {
 
     public List<UrlEntity> getUrlsByTag(String tag) {
         return bigtableRepository.getUrlsByTag(tag);
+    }
+
+    public List<UrlEntity> getUrlsByTagAndOwnerId(String tag, String ownerId) {
+        return bigtableRepository.getUrlsByTagAndOwnerId(tag, ownerId);
+    }
+
+    public List<UrlEntity> getUrlsByOwnerId(String ownerId) {
+        return bigtableRepository.getUrlsByOwnerId(ownerId);
     }
 }

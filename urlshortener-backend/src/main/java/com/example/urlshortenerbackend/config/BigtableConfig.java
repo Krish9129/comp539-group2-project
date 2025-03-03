@@ -24,7 +24,7 @@ public class BigtableConfig {
 
     @Bean
     public BigtableDataClient bigtableDataClient() throws IOException {
-        // 使用 ClassPathResource 加载资源文件
+        // use ClassPathResource to load recourse file
         Resource resource = new ClassPathResource("team2-service-account-key.json");
 
         GoogleCredentials credentials = GoogleCredentials.fromStream(
