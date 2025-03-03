@@ -44,7 +44,6 @@ Our URL Shortener service follows a **distributed microservices architecture** w
 - Access to GCP (for production deployment)
 - Google Cloud SDK (for deployment)
 
-I'll help you modify the README to add OAuth Google configuration instructions. Here's how I'd update that section:
 
 ### Backend Setup
 
@@ -62,23 +61,11 @@ I'll help you modify the README to add OAuth Google configuration instructions. 
    - Review and update `src/main/resources/application.properties` if needed
    - Update the following properties if necessary:
      ```properties
-     spring.cloud.gcp.bigtable.project-id=rice-comp-539-spring-2022
-     spring.cloud.gcp.bigtable.instance-id=comp-539-bigtable
-     server.port=8080
-     
      # OAuth2 Google configuration
      spring.security.oauth2.client.registration.google.client-id=your-google-client-id
      spring.security.oauth2.client.registration.google.client-secret=your-google-client-secret
-     spring.security.oauth2.client.registration.google.scope=email,profile
-     spring.security.oauth2.client.registration.google.redirect-uri=http://localhost:8080/login/oauth2/code/google
+     spring.security.oauth2.client.registration.google.redirect-uri=your-redirect-uri
      ```
-   - To obtain Google OAuth credentials:
-     1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
-     2. Navigate to "APIs & Services" > "Credentials"
-     3. Click "Create Credentials" > "OAuth client ID"
-     4. Choose "Web application" as the application type
-     5. Add `http://localhost:8080/login/oauth2/code/google` to the authorized redirect URIs
-     6. Copy the generated client ID and client secret to your application.properties file
 
 4. **Build the project**:
    ```bash
