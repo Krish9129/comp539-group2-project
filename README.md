@@ -1,19 +1,22 @@
 # URL Shortener Service - Group2
 
 ## Project Overview
+
 This project is a highly scalable and distributed **URL Shortener Service** deployed on **Google Cloud Platform (GCP)**. The service efficiently generates and resolves short URLs while ensuring high availability, low latency, and optimized caching. The system is designed to handle thousands of requests seamlessly.
 
 ## Team Members & Roles
-| Role                  | Team Member(s) |
-|-----------------------|---------------|
-| **Team Leader**      | Zilong Xue |
-| **Backend Developers** | Krishna Esanakula, Zilong Xue |
-| **Frontend Developers** | Haotian Zheng, Shen Gao |
-| **Tester & Tech Support** | Sid Wang |
-| **Deployer** | Tong Wu |
-| **Documentation** | All Members |
+
+| Role                      | Team Member(s)                |
+| ------------------------- | ----------------------------- |
+| **Team Leader**           | Zilong Xue                    |
+| **Backend Developers**    | Krishna Esanakula, Zilong Xue |
+| **Frontend Developers**   | Haotian Zheng, Shen Gao       |
+| **Tester & Tech Support** | Sid Wang                      |
+| **Deployer**              | Tong Wu                       |
+| **Documentation**         | All Members                   |
 
 ## System Architecture
+
 <img src="architecture.png" alt="System Architecture" width="800">
 Our URL Shortener service follows a **distributed microservices architecture** with the following components:
 
@@ -27,6 +30,7 @@ Our URL Shortener service follows a **distributed microservices architecture** w
 6. **Logging & Monitoring**: Uses **Cloud Logging and Monitoring** to track system health and performance metrics.
 
 ## Tech Stack
+
 - **Frontend**: React.js (UI components), CSS, JavaScript
 - **Backend**: Java with Spring Boot
 - **Database**: Google Cloud Bigtable (NoSQL)
@@ -38,26 +42,29 @@ Our URL Shortener service follows a **distributed microservices architecture** w
 ## Setup and Running Instructions
 
 ### Prerequisites
+
 - Java 17 or higher
 - Node.js 14 or higher and npm
 - Git
 - Access to GCP (for production deployment)
 - Google Cloud SDK (for deployment)
 
-
 ### Backend Setup
 
 1. **Clone the repository**:
+
    ```bash
    git clone https://github.com/ZilongXue/comp539-group2-project.git
    cd urlshortener-backend
    ```
 
 2. **Configure Google Cloud credentials**:
+
    - Place your Google Cloud service account key file (`team2-service-account-key.json`) in the `src/main/resources` directory
    - Ensure the service account has appropriate permissions for Bigtable
 
 3. **Configure application.properties**:
+
    - Review and update `src/main/resources/application.properties` if needed
    - Update the following properties if necessary:
      ```properties
@@ -68,6 +75,7 @@ Our URL Shortener service follows a **distributed microservices architecture** w
      ```
 
 4. **Build the project**:
+
    ```bash
    ./mvnw clean package
    ```
@@ -81,11 +89,13 @@ Our URL Shortener service follows a **distributed microservices architecture** w
 ### Frontend Setup
 
 1. **Navigate to the frontend directory**:
+
    ```bash
    cd ../url-shortener-frontend
    ```
 
 2. **Install dependencies**:
+
    ```bash
    npm install
    ```
@@ -96,16 +106,73 @@ Our URL Shortener service follows a **distributed microservices architecture** w
    ```
    The frontend will be available at http://localhost:3000
 
-## Timelines & Milestones
-| Date Range | Milestones |
-|------------|---------------------------------|
-| Jan 31 – Feb 20 | ✅ Set up infrastructure & core functionality |
-| Feb 21 – Mar 20 | 🔗 Add project features |
-| Mar 21 – Apr 10 | 📊 Implement Custom Alias, User Account System, Testing |
-| Apr 11 – Apr 15 | 🚀 Performance Tuning, Security Enhancements |
-| Apr 11 – Apr 15 | 🏁 Deployment & Maintenance |
+## Deploy Instructions
 
+### Prerequisites
+
+- Access to GCP (for production deployment)
+- Google Cloud SDK (for deployment)
+
+Run the following commands to set up your GCP environment:
+
+1. **Authenticate with Google Cloud**:
+
+   ```bash
+   gcloud auth login
+   ```
+
+2. **Set the target GCP project**:
+   ```bash
+   gcloud config set project [YOUR_PROJECT_ID]
+   ```
+
+### Backend Deployment
+
+1. **Configure app.yaml**
+
+   - Review and update `app.yaml` if needed
+   - Update the following properties if necessary:
+     ```properties
+     service_account: your-service-account
+     env_variables:
+       GOOGLE_APPLICATION_CREDENTIALS: your-service-account-key.json
+     ```
+
+2. **Package the application using Maven**:
+
+   - This will generate `target/urlshortener-backend-0.0.1-SNAPSHOT.jar`
+
+3. **Deploy the backend server**:
+   ```bash
+   cd url-shortner-backend
+   gcloud app deploy
+   ```
+
+### Frontend Deployment
+
+1. **Build the project**:
+
+   ```bash
+   npm run build
+   ```
+
+2. **Deploy the frontend server**:
+   ```bash
+   cd url-shortner-frontend
+   gcloud app deploy
+   ```
+
+## Timelines & Milestones
+
+| Date Range      | Milestones                                              |
+| --------------- | ------------------------------------------------------- |
+| Jan 31 – Feb 20 | ✅ Set up infrastructure & core functionality           |
+| Feb 21 – Mar 20 | 🔗 Add project features                                 |
+| Mar 21 – Apr 10 | 📊 Implement Custom Alias, User Account System, Testing |
+| Apr 11 – Apr 15 | 🚀 Performance Tuning, Security Enhancements            |
+| Apr 11 – Apr 15 | 🏁 Deployment & Maintenance                             |
 
 ## Contributions
+
 - Fork the repository, create a feature branch, and submit a PR.
 - Follow the project coding standards and guidelines.
