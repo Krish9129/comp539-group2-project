@@ -1,0 +1,6 @@
+runtime: java17
+entrypoint: java -jar target/urlshortener-backend-0.0.1-SNAPSHOT.jar
+service: urlshortener-backend
+service_account: your-service-account
+env_variables:
+  GOOGLE_APPLICATION_CREDENTIALS: your-service-account-key.json
