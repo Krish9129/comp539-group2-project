@@ -6,13 +6,13 @@ import com.google.cloud.bigtable.data.v2.BigtableDataClient;
 import com.google.cloud.bigtable.data.v2.models.Query;
 import com.google.cloud.bigtable.data.v2.models.Row;
 import com.google.cloud.bigtable.data.v2.models.RowMutation;
+import com.google.cloud.bigtable.data.v2.models.Filters;
 import com.google.api.gax.rpc.ServerStream;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
-import java.util.Optional;
-import java.util.ArrayList;
-import java.util.List;
+import java.time.ZoneOffset;
+import java.util.*;
 
 @Repository
 public class BigtableRepository {
@@ -166,6 +166,69 @@ public class BigtableRepository {
 
             bigtableClient.mutateRow(rowMutation);
         }
+    }
+
+    public void saveClickEvent(String rowKey, String timestamp, String ip, String userAgent, String referer, String country, String deviceType, String browser) {
+        RowMutation rowMutation = RowMutation.create(TABLE_NAME, rowKey)
+                .setCell("click_events", "timestamp", timestamp)
+                .setCell("click_events", "ip_address", ip)
+                .setCell("click_events", "user_agent", userAgent)
+                .setCell("click_events", "referer", referer)
+                .setCell("click_events", "country", country)
+                .setCell("click_events", "device_type", deviceType)
+                .setCell("click_events", "browser", browser);
+
+        bigtableClient.mutateRow(rowMutation);
+    }
+
+    public List<String> getClickTimestamps(String shortId) {
+        List<String> timestamps = new ArrayList<>();
+
+        // Create a query with filters
+        Query query = Query.create(TABLE_NAME)
+                .filter(
+                        Filters.FILTERS.chain()
+                                .filter(Filters.FILTERS.family().exactMatch("click_events"))
+                                .filter(Filters.FILTERS.qualifier().exactMatch("timestamp"))
+                );
+
+        ServerStream<Row> rows = bigtableClient.readRows(query);
+
+        for (Row row : rows) {
+            String rowKey = row.getKey().toStringUtf8();
+            if (rowKey.startsWith(shortId)) {
+                String timestamp = row.getCells("click_events", "timestamp").get(0).getValue().toStringUtf8();
+                timestamps.add(timestamp);
+            }
+        }
+
+        return timestamps;
+    }
+
+    public List<Map<String, String>> getClickData(String shortId) {
+        List<Map<String, String>> clickEvents = new ArrayList<>();
+
+        Query query = Query.create(TABLE_NAME)
+                .filter(
+                      Filters.FILTERS.family().exactMatch("click_events")
+                );
+
+        ServerStream<Row> rows = bigtableClient.readRows(query);
+
+        for (Row row : rows) {
+            String rowKey = row.getKey().toStringUtf8();
+            if (!rowKey.startsWith(shortId)) continue;
+
+            Map<String, String> clickData = new HashMap<>();
+            clickData.put("timestamp", row.getCells("click_events", "timestamp").get(0).getValue().toStringUtf8());
+            clickData.put("device_type", row.getCells("click_events", "device_type").get(0).getValue().toStringUtf8());
+            clickData.put("browser", row.getCells("click_events", "browser").get(0).getValue().toStringUtf8());
+            clickData.put("country", row.getCells("click_events", "country").get(0).getValue().toStringUtf8());
+
+            clickEvents.add(clickData);
+        }
+
+        return clickEvents;
     }
 
     public List<UrlEntity> getUrlsByTag(String tag) {

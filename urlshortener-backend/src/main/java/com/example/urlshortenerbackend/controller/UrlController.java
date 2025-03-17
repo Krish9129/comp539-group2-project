@@ -2,6 +2,7 @@ package com.example.urlshortenerbackend.controller;
 
 import com.example.urlshortenerbackend.model.UrlEntity;
 import com.example.urlshortenerbackend.service.UrlService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
@@ -85,7 +86,7 @@ public class UrlController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getLongUrl(@PathVariable String id, Authentication authentication) {
+    public ResponseEntity<?> getLongUrl(@PathVariable String id, Authentication authentication, HttpServletRequest request) {
         Optional<UrlEntity> urlEntityOpt = urlService.getUrlById(id);
 
         // Check if URL exists
@@ -111,6 +112,9 @@ public class UrlController {
 
         Optional<String> longUrl = urlService.getLongUrl(id);
         if (longUrl.isPresent()) {
+            // Log the click event
+            urlService.logClickEvent(id, request);
+
             // use HTTP 302 to redirect
             return ResponseEntity.status(302)
                     .header("Location", longUrl.get())
@@ -217,5 +221,11 @@ public class UrlController {
             return provider + "#" + providerId;
         }
         return null;
+    }
+
+    @GetMapping("/{shortId}/analytics")
+    public ResponseEntity<Map<String, Object>> getAnalytics(@PathVariable String shortId) {
+        Map<String, Object> analyticsData = urlService.getAnalytics(shortId);
+        return ResponseEntity.ok(analyticsData);
     }
 }
