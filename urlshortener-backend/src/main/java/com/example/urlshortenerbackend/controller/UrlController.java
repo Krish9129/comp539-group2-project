@@ -2,7 +2,9 @@ package com.example.urlshortenerbackend.controller;
 
 import com.example.urlshortenerbackend.model.UrlEntity;
 import com.example.urlshortenerbackend.service.UrlService;
+import com.example.urlshortenerbackend.service.UrlSummaryService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
@@ -19,6 +21,8 @@ import java.util.List;
 @RequestMapping("/api")
 @CrossOrigin(origins = "*")
 public class UrlController {
+    @Autowired
+    private UrlSummaryService urlSummaryService;
 
     private final UrlService urlService;
 
@@ -196,14 +200,31 @@ public class UrlController {
     }
 
     @GetMapping("/urls")
-    public ResponseEntity<?> getUrlsByTag(@RequestParam String tag, Authentication authentication) {
-        // If user is authenticated, show their private URLs for the tag
+    public ResponseEntity<?> getUrlsByTag(
+            @RequestParam(required = false) String tag,
+            Authentication authentication) {
+
+        // If user is authenticated
         if (authentication != null) {
             String ownerId = getOwnerId(authentication);
-            List<UrlEntity> urls = urlService.getUrlsByTagAndOwnerId(tag, ownerId);
-            return ResponseEntity.ok(urls);
+
+            // If tag is null, empty or blank, return all URLs for the authenticated user
+            if (tag == null || tag.trim().isEmpty()) {
+                List<UrlEntity> allUserUrls = urlService.getUrlsByOwnerId(ownerId);
+                return ResponseEntity.ok(allUserUrls);
+            } else {
+                // Search by tag (existing functionality)
+                List<UrlEntity> urls = urlService.getUrlsByTagAndOwnerId(tag, ownerId);
+                return ResponseEntity.ok(urls);
+            }
         } else {
-            // Only show public URLs for unauthenticated users
+            // For unauthenticated users, only show public URLs
+            // If no tag provided, return an informative message
+            if (tag == null || tag.trim().isEmpty()) {
+                return ResponseEntity.ok(Map.of("message", "Please provide a tag to search or login to view all your URLs"));
+            }
+
+            // Search by tag (existing functionality)
             List<UrlEntity> urls = urlService.getUrlsByTag(tag);
             if (urls.isEmpty()) {
                 return ResponseEntity.ok(Map.of("message", "No URLs found for this tag"));
@@ -212,7 +233,7 @@ public class UrlController {
         }
     }
 
-    // 添加缺失的 getOwnerId 方法
+    // if authenticated, return the ownerId
     private String getOwnerId(Authentication authentication) {
         if (authentication instanceof OAuth2AuthenticationToken) {
             OAuth2User oauth2User = (OAuth2User) authentication.getPrincipal();
@@ -224,8 +245,43 @@ public class UrlController {
     }
 
     @GetMapping("/{shortId}/analytics")
-    public ResponseEntity<Map<String, Object>> getAnalytics(@PathVariable String shortId) {
-        Map<String, Object> analyticsData = urlService.getAnalytics(shortId);
+    public ResponseEntity<Map<String, Object>> getAnalytics(
+            @PathVariable String shortId,
+            @RequestParam(required = false) String date) {
+        Map<String, Object> analyticsData = urlService.getAnalytics(shortId, date);
         return ResponseEntity.ok(analyticsData);
+    }
+
+    @GetMapping("/{id}/summary")
+    public ResponseEntity<?> getUrlSummary(@PathVariable String id, Authentication authentication) {
+        Optional<UrlEntity> urlEntityOpt = urlService.getUrlById(id);
+
+        // Check if URL exists
+        if (urlEntityOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        UrlEntity urlEntity = urlEntityOpt.get();
+
+        // Check if URL is private and validate ownership
+        if (urlEntity.isPrivate()) {
+            if (authentication == null) {
+                return ResponseEntity.status(401).body(Map.of("error", "Authentication required for private URLs"));
+            }
+
+            String ownerId = getOwnerId(authentication);
+            if (!ownerId.equals(urlEntity.getOwnerId())) {
+                return ResponseEntity.status(403).body(Map.of("error", "You don't have permission to access this URL"));
+            }
+        }
+
+        // Get URL summary
+        Map<String, String> summary = urlSummaryService.getUrlSummary(id);
+
+        if (summary.containsKey("error")) {
+            return ResponseEntity.status(500).body(summary);
+        }
+
+        return ResponseEntity.ok(summary);
     }
 }

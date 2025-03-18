@@ -41,6 +41,7 @@ public class BigtableRepository {
     private static final String COL_ROLE = "role";
     private static final String COL_LAST_LOGIN = "last_login";
 
+
     private final BigtableDataClient bigtableClient;
 
     public BigtableRepository(BigtableDataClient bigtableClient) {
@@ -51,7 +52,6 @@ public class BigtableRepository {
     public void saveUser(UserEntity userEntity) {
         // Ensure the ID is constructed correctly
         if (userEntity.getId() == null || userEntity.getId().isEmpty()) {
-            // Construct ID if not already set
             userEntity.setId("user#" + userEntity.getProvider() + "#" + userEntity.getProviderId());
         }
 
@@ -59,38 +59,23 @@ public class BigtableRepository {
             // Create a mutation to save all user fields
             RowMutation rowMutation = RowMutation.create(TABLE_NAME, userEntity.getId());
 
-            // Add all non-null fields to the mutation
-            if (userEntity.getEmail() != null) {
-                rowMutation.setCell("user_data", "email", userEntity.getEmail());
-            }
+            // Map of field names to values with null handling
+            Map<String, String> fieldMap = new HashMap<>();
+            fieldMap.put(COL_EMAIL, userEntity.getEmail());
+            fieldMap.put(COL_NAME, userEntity.getName());
+            fieldMap.put(COL_PROVIDER, userEntity.getProvider());
+            fieldMap.put(COL_PROVIDER_ID, userEntity.getProviderId());
+            fieldMap.put(COL_PICTURE, userEntity.getPictureUrl());
+            fieldMap.put(COL_ROLE, userEntity.getRole() != null ? userEntity.getRole() : "USER");
+            fieldMap.put(COL_LAST_LOGIN, userEntity.getLastLogin() != null ?
+                    userEntity.getLastLogin() : java.time.Instant.now().toString());
 
-            if (userEntity.getName() != null) {
-                rowMutation.setCell("user_data", "name", userEntity.getName());
-            }
-
-            if (userEntity.getProvider() != null) {
-                rowMutation.setCell("user_data", "provider", userEntity.getProvider());
-            }
-
-            if (userEntity.getProviderId() != null) {
-                rowMutation.setCell("user_data", "provider_id", userEntity.getProviderId());
-            }
-
-            if (userEntity.getPictureUrl() != null) {
-                rowMutation.setCell("user_data", "picture", userEntity.getPictureUrl());
-            }
-
-            if (userEntity.getRole() != null) {
-                rowMutation.setCell("user_data", "role", userEntity.getRole());
-            } else {
-                rowMutation.setCell("user_data", "role", "USER"); // Default role
-            }
-
-            if (userEntity.getLastLogin() != null) {
-                rowMutation.setCell("user_data", "last_login", userEntity.getLastLogin());
-            } else {
-                rowMutation.setCell("user_data", "last_login", java.time.Instant.now().toString());
-            }
+            // Add all fields to the mutation in one loop
+            fieldMap.forEach((column, value) -> {
+                if (value != null) {
+                    rowMutation.setCell(CF_USER_DATA, column, value);
+                }
+            });
 
             // Execute the mutation
             bigtableClient.mutateRow(rowMutation);
@@ -179,30 +164,6 @@ public class BigtableRepository {
                 .setCell("click_events", "browser", browser);
 
         bigtableClient.mutateRow(rowMutation);
-    }
-
-    public List<String> getClickTimestamps(String shortId) {
-        List<String> timestamps = new ArrayList<>();
-
-        // Create a query with filters
-        Query query = Query.create(TABLE_NAME)
-                .filter(
-                        Filters.FILTERS.chain()
-                                .filter(Filters.FILTERS.family().exactMatch("click_events"))
-                                .filter(Filters.FILTERS.qualifier().exactMatch("timestamp"))
-                );
-
-        ServerStream<Row> rows = bigtableClient.readRows(query);
-
-        for (Row row : rows) {
-            String rowKey = row.getKey().toStringUtf8();
-            if (rowKey.startsWith(shortId)) {
-                String timestamp = row.getCells("click_events", "timestamp").get(0).getValue().toStringUtf8();
-                timestamps.add(timestamp);
-            }
-        }
-
-        return timestamps;
     }
 
     public List<Map<String, String>> getClickData(String shortId) {
@@ -303,7 +264,22 @@ public class BigtableRepository {
     }
 
     public void deleteUrl(String id) {
+        // delete URL self
         bigtableClient.mutateRow(RowMutation.create(TABLE_NAME, id).deleteRow());
+
+        // search for this URL's click_events
+        Query query = Query.create(TABLE_NAME)
+                .filter(Filters.FILTERS.family().exactMatch("click_events"));
+
+        ServerStream<Row> rows = bigtableClient.readRows(query);
+
+        for (Row row : rows) {
+            String rowKey = row.getKey().toStringUtf8();
+            // if start with shortId
+            if (rowKey.startsWith(id + "_")) {
+                bigtableClient.mutateRow(RowMutation.create(TABLE_NAME, rowKey).deleteRow());
+            }
+        }
     }
 
     public boolean shortIdExists(String shortId) {
@@ -368,6 +344,47 @@ public class BigtableRepository {
             e.printStackTrace();
             return Optional.empty();
         }
+    }
+
+    // Get cached analysis for a URL
+    public Optional<Map<String, String>> getAnalysisForUrl(String id) {
+        Row row = bigtableClient.readRow(TABLE_NAME, id);
+        if (row == null) return Optional.empty();
+
+        // Check if summary exists in the CF_SHORT_URLS column family
+        if (row.getCells(CF_SHORT_URLS, "summary").isEmpty()) {
+            return Optional.empty();
+        }
+
+        Map<String, String> analysis = new HashMap<>();
+        analysis.put("summary", row.getCells(CF_SHORT_URLS, "summary").get(0).getValue().toStringUtf8());
+
+        // Get keywords if they exist
+        if (!row.getCells(CF_SHORT_URLS, "keywords").isEmpty()) {
+            analysis.put("keywords", row.getCells(CF_SHORT_URLS, "keywords").get(0).getValue().toStringUtf8());
+        } else {
+            analysis.put("keywords", "");
+        }
+
+        return Optional.of(analysis);
+    }
+
+    // Save analysis for a URL
+    public void saveAnalysisForUrl(String id, Map<String, String> analysis) {
+        RowMutation rowMutation = RowMutation.create(TABLE_NAME, id);
+
+        if (analysis.containsKey("summary")) {
+            rowMutation.setCell(CF_SHORT_URLS, "summary", analysis.get("summary"));
+        }
+
+        if (analysis.containsKey("keywords")) {
+            rowMutation.setCell(CF_SHORT_URLS, "keywords", analysis.get("keywords"));
+        }
+
+        // Add timestamp in metadata
+        rowMutation.setCell(CF_METADATA, "analysis_timestamp", Instant.now().toString());
+
+        bigtableClient.mutateRow(rowMutation);
     }
 
     // Helper method to build UserEntity from Row

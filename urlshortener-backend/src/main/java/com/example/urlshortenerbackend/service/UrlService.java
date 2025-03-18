@@ -15,11 +15,9 @@ import com.google.zxing.qrcode.QRCodeWriter;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.time.Instant;
-import java.time.ZoneOffset;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 
 @Service
@@ -95,7 +93,7 @@ public class UrlService {
         return Optional.empty();
     }
 
-    // 添加缺失的 getUrlById 方法
+    // getUrlById
     public Optional<UrlEntity> getUrlById(String id) {
         return bigtableRepository.getUrlById(id);
     }
@@ -141,22 +139,6 @@ public class UrlService {
         return bigtableRepository.getUrlsByOwnerId(ownerId);
     }
 
-    public Map<Integer, Long> getClicksPerHour(String shortId) {
-        Map<Integer, Long> hourlyClicks = new HashMap<>();
-        for (int i = 0; i < 24; i++) {
-            hourlyClicks.put(i, 0L);
-        }
-
-        List<String> timestamps = bigtableRepository.getClickTimestamps(shortId);
-
-        for (String timestampStr : timestamps) {
-            Instant clickTime = Instant.parse(timestampStr);
-            int hour = clickTime.atZone(ZoneOffset.UTC).getHour();
-            hourlyClicks.put(hour, hourlyClicks.get(hour) + 1);
-        }
-        return hourlyClicks;
-    }
-
     public void logClickEvent(String shortId, HttpServletRequest request) {
         String timestamp = Instant.now().toString();
         String rowKey = shortId + "_" + timestamp + "_" + UUID.randomUUID();
@@ -171,6 +153,123 @@ public class UrlService {
         bigtableRepository.saveClickEvent(rowKey, timestamp, ip, userAgent, referer, country, deviceType, browser);
     }
 
+    /**
+     * Gets analytics data for a short URL for a specific date.
+     *
+     * @param shortId The ID of the shortened URL
+     * @param dateStr Date in ISO format (yyyy-MM-dd). If null, returns data for the current day.
+     * @return Map containing analytics data organized by categories with default values for common types
+     */
+    public Map<String, Object> getAnalytics(String shortId, String dateStr) {
+        // Initialize counters for analytics with default values of 0
+        Map<Integer, Long> clicksPerHour = new HashMap<>();
+        for (int i = 0; i < 24; i++) {
+            clicksPerHour.put(i, 0L);
+        }
+
+        // Initialize device distribution with common device types
+        Map<String, Long> deviceDistribution = new HashMap<>();
+        deviceDistribution.put("Desktop", 0L);
+        deviceDistribution.put("Mobile", 0L);
+        deviceDistribution.put("Tablet", 0L);
+
+        // Initialize browser distribution with common browsers
+        Map<String, Long> browserDistribution = new HashMap<>();
+        browserDistribution.put("Chrome", 0L);
+        browserDistribution.put("Firefox", 0L);
+        browserDistribution.put("Safari", 0L);
+        browserDistribution.put("Edge", 0L);
+        browserDistribution.put("Internet Explorer", 0L);
+        browserDistribution.put("Other", 0L);
+
+        // Initialize country distribution with most common countries
+        // We'll add actual data to this map, but won't pre-populate with too many countries
+        Map<String, Long> countryDistribution = new HashMap<>();
+
+        // Add a few major countries that are commonly seen in analytics
+        countryDistribution.put("United States", 0L);
+        countryDistribution.put("China", 0L);
+        countryDistribution.put("India", 0L);
+        countryDistribution.put("United Kingdom", 0L);
+        countryDistribution.put("Germany", 0L);
+        countryDistribution.put("Unknown", 0L);
+
+        // Parse the date parameter or use current date if not provided
+        LocalDate targetDate;
+        if (dateStr != null && !dateStr.isEmpty()) {
+            try {
+                targetDate = LocalDate.parse(dateStr);
+            } catch (DateTimeParseException e) {
+                // If date format is invalid, default to current date
+                targetDate = LocalDate.now();
+            }
+        } else {
+            targetDate = LocalDate.now();
+        }
+
+        // Get user's local timezone
+        ZoneId localZone = ZoneId.systemDefault();
+
+        // Calculate start and end time for the requested date in user's timezone
+        ZonedDateTime startOfDay = targetDate.atStartOfDay(localZone);
+        ZonedDateTime endOfDay = startOfDay.plusDays(1).minusNanos(1);
+
+        // Convert to Instant for comparison with stored timestamps
+        Instant startInstant = startOfDay.toInstant();
+        Instant endInstant = endOfDay.toInstant();
+
+        // Get all click data for the shortId
+        List<Map<String, String>> allClickData = bigtableRepository.getClickData(shortId);
+
+        // Filter and process click data for the specified date
+        for (Map<String, String> click : allClickData) {
+            Instant clickTime = Instant.parse(click.get("timestamp"));
+
+            // Skip if the click is not within the target date
+            if (clickTime.isBefore(startInstant) || clickTime.isAfter(endInstant)) {
+                continue;
+            }
+
+            // Process click data for the specified date
+            ZonedDateTime localTime = clickTime.atZone(localZone);
+            int hour = localTime.getHour();
+            clicksPerHour.put(hour, clicksPerHour.get(hour) + 1);
+
+            // Process device type
+            String device = click.get("device_type");
+            deviceDistribution.put(device, deviceDistribution.getOrDefault(device, 0L) + 1);
+
+            // Process browser with special handling for "Other" category
+            String browser = click.get("browser");
+            if (browserDistribution.containsKey(browser)) {
+                browserDistribution.put(browser, browserDistribution.get(browser) + 1);
+            } else {
+                // Increment "Other" for any browser not in our predefined list
+                browserDistribution.put("Other", browserDistribution.get("Other") + 1);
+            }
+
+            // Process country with special handling for unknown countries
+            String country = click.get("country");
+            if (country == null || country.isEmpty() || country.equals("Unknown")) {
+                countryDistribution.put("Unknown", countryDistribution.getOrDefault("Unknown", 0L) + 1);
+            } else {
+                // Add country data to the map, even if it wasn't in our initial list
+                countryDistribution.put(country, countryDistribution.getOrDefault(country, 0L) + 1);
+            }
+        }
+
+        // Prepare response data
+        Map<String, Object> analyticsData = new HashMap<>();
+        analyticsData.put("date", targetDate.toString());
+        analyticsData.put("clicks_per_hour", clicksPerHour);
+        analyticsData.put("device_distribution", deviceDistribution);
+        analyticsData.put("browser_distribution", browserDistribution);
+        analyticsData.put("country_distribution", countryDistribution);
+        analyticsData.put("total_clicks", clicksPerHour.values().stream().mapToLong(Long::longValue).sum());
+
+        return analyticsData;
+    }
+
     private String determineDeviceType(String userAgent) {
         if (userAgent.toLowerCase().contains("mobile")) {
             return "Mobile";
@@ -180,11 +279,34 @@ public class UrlService {
         return "Desktop";
     }
 
+    /**
+     * Determines the browser more accurately from user agent string.
+     * Checks for browser identifiers in a specific order to handle modern browsers.
+     *
+     * @param userAgent The user agent string from the HTTP request
+     * @return The identified browser name
+     */
     private String determineBrowser(String userAgent) {
-        if (userAgent.contains("Chrome")) return "Chrome";
-        if (userAgent.contains("Firefox")) return "Firefox";
-        if (userAgent.contains("Safari")) return "Safari";
-        if (userAgent.contains("Edge")) return "Edge";
+        if (userAgent == null) {
+            return "Unknown";
+        }
+
+        // Convert to lowercase for case-insensitive matching
+        String ua = userAgent.toLowerCase();
+
+        // Check for browsers in order of specificity (most specific first)
+        if (ua.contains("edg/") || ua.contains("edge/")) {
+            return "Edge";
+        }else if (ua.contains("firefox/")) {
+            return "Firefox";
+        } else if (ua.contains("safari/") && ua.contains("chrome/") && !ua.contains("chromium/")) {
+            return "Chrome";
+        } else if (ua.contains("safari/") && !ua.contains("chrome/")) {
+            return "Safari";
+        } else if (ua.contains("trident/") || ua.contains("msie ")) {
+            return "Internet Explorer";
+        }
+
         return "Other";
     }
 
@@ -199,45 +321,5 @@ public class UrlService {
         } catch (Exception e) {
             return "Unknown"; // Handle errors gracefully
         }
-    }
-
-    public Map<String, Object> getAnalytics(String shortId) {
-        Map<Integer, Long> clicksPerHour = new HashMap<>();
-        for (int i = 0; i < 24; i++) {
-            clicksPerHour.put(i, 0L);
-        }
-
-        Map<String, Long> deviceDistribution = new HashMap<>();
-        Map<String, Long> browserDistribution = new HashMap<>();
-        Map<String, Long> countryDistribution = new HashMap<>();
-
-        List<Map<String, String>> clickData = bigtableRepository.getClickData(shortId);
-
-        ZoneId localZone = ZoneId.systemDefault(); // Change to user’s preferred timezone if needed
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z");
-
-        for (Map<String, String> click : clickData) {
-            Instant clickTime = Instant.parse(click.get("timestamp"));
-            ZonedDateTime localTime = clickTime.atZone(localZone);
-            int hour = localTime.getHour(); // Get local hour
-            clicksPerHour.put(hour, clicksPerHour.get(hour) + 1);
-
-            String device = click.get("device_type");
-            deviceDistribution.put(device, deviceDistribution.getOrDefault(device, 0L) + 1);
-
-            String browser = click.get("browser");
-            browserDistribution.put(browser, browserDistribution.getOrDefault(browser, 0L) + 1);
-
-            String country = click.get("country");
-            countryDistribution.put(country, countryDistribution.getOrDefault(country, 0L) + 1);
-        }
-
-        Map<String, Object> analyticsData = new HashMap<>();
-        analyticsData.put("clicks_per_hour", clicksPerHour);
-        analyticsData.put("device_distribution", deviceDistribution);
-        analyticsData.put("browser_distribution", browserDistribution);
-        analyticsData.put("country_distribution", countryDistribution);
-
-        return analyticsData;
     }
 }
