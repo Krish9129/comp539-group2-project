@@ -3,7 +3,6 @@ import { Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import urlService from '../services/urlService';
 import { useAuth } from '../context/AuthContext';
-import UrlSuccessCard from './UrlSuccessCard'; // Import the new success component
 
 const UrlForm = ({ onSuccess }) => {
   const [url, setUrl] = useState('');
@@ -57,9 +56,6 @@ const UrlForm = ({ onSuccess }) => {
       <h2 className="mb-4">Create Short URL</h2>
       
       {error && <Alert variant="danger">{error}</Alert>}
-      
-      {/* Use the new UrlSuccessCard component for result display */}
-      {result && <UrlSuccessCard result={result} />}
       
       <Form onSubmit={handleSubmit}>
         <Form.Group className="mb-3">

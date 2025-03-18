@@ -22,7 +22,7 @@ const Header = () => {
       <Container>
         <Navbar.Brand as={Link} to="/">
           <FaLink className="me-2" />
-          URL Shortener
+          ZapLink
         </Navbar.Brand>
         
         <Navbar.Toggle aria-controls="basic-navbar-nav" />

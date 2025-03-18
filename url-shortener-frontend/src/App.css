@@ -20,11 +20,224 @@ body {
 
 /* card styles */
 .card {
-  transition: box-shadow 0.3s ease;
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
 }
 
 .card:hover {
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Homepage specific styles */
+.homepage-wrapper {
+  min-height: 100vh;
+}
+
+.hover-card {
+  transition: all 0.3s ease;
+  cursor: default;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.hover-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
+}
+
+.icon-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  margin-bottom: 10px;
+  transition: transform 0.3s ease;
+}
+
+.hover-card:hover .icon-circle {
+  transform: scale(1.1);
+}
+
+/* Success Card Styling */
+.success-card {
+  border-radius: 10px;
+  transition: all 0.3s ease;
+  margin-bottom: 2rem;
+}
+
+.success-card .card-header {
+  border-bottom: none;
+}
+
+.success-card .badge {
+  font-weight: 600;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.success-icon-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  font-size: 0.8rem;
+}
+
+.close-btn {
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.close-btn:hover {
+  opacity: 1;
+  transform: none;
+}
+
+/* Recently created link card styles */
+.recently-created-card {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.recently-created-card .card-header {
+  border-bottom: none;
+}
+
+.recently-created-card .badge {
+  font-weight: 600;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.success-banner {
+  position: relative;
+  padding: 10px;
+  border-radius: 6px;
+  background-color: rgba(40, 167, 69, 0.05);
+  margin-bottom: 15px;
+}
+
+.success-icon-wrapper {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  margin: 0 auto;
+}
+
+.success-pulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  background-color: rgba(40, 167, 69, 0.1);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.success-pulse::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 15px;
+  height: 15px;
+  background-color: #28a745;
+  border-radius: 50%;
+}
+
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 0.8;
+  }
+  70% {
+    transform: translate(-50%, -50%) scale(1.5);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 0;
+  }
+}
+
+/* QR code modal styling */
+.qr-modal .modal-content {
+  border-radius: 12px;
+  border: none;
+  overflow: hidden;
+}
+
+.qr-modal .modal-header .modal-title {
+  font-weight: 600;
+}
+
+.qr-modal .modal-header .btn-close:focus {
+  box-shadow: none;
+  outline: none;
+}
+
+.qr-container {
+  transition: all 0.3s ease;
+}
+
+.qr-container:hover {
+  transform: scale(1.02);
+}
+
+/* URL Success Card styling enhancements */
+.input-group-text {
+  transition: all 0.2s ease;
+}
+
+.form-control:focus + .input-group-text,
+.input-group-text:focus + .form-control {
+  border-color: #80bdff;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Link History Card styling */
+.link-history-card .card-header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Enhanced CTA section styling */
+.cta-section .card {
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.cta-section h2 {
+  font-size: 2.2rem;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.cta-section .lead {
+  font-size: 1.2rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.cta-section .btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* AI feature card styling */
+.ai-feature-card .icon-circle {
+  background: linear-gradient(135deg, rgba(100, 100, 255, 0.15), rgba(100, 100, 255, 0.1)) !important;
+  box-shadow: 0 0 15px rgba(100, 100, 255, 0.2);
+}
+
+.ai-feature-card:hover .icon-circle {
+  box-shadow: 0 0 20px rgba(100, 100, 255, 0.3);
 }
 
 /* url list styles */
@@ -49,4 +262,45 @@ body {
   .container {
     padding: 0 15px;
   }
+  
+  .icon-circle {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .cta-section h2 {
+    font-size: 1.8rem;
+  }
+  
+  .cta-section .lead {
+    font-size: 1.1rem;
+  }
+  
+  .success-card .card-header h5 {
+    font-size: 1rem;
+  }
+  
+  .success-card .badge {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+  }
+}
+
+/* Animation transitions */
+.fade-enter {
+  opacity: 0;
+}
+
+.fade-enter-active {
+  opacity: 1;
+  transition: opacity 300ms ease-in;
+}
+
+.fade-exit {
+  opacity: 1;
+}
+
+.fade-exit-active {
+  opacity: 0;
+  transition: opacity 300ms ease-out;
 }

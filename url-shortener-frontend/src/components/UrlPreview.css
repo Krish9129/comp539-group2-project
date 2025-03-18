@@ -1,0 +1,188 @@
+.url-preview-container {
+  max-width: 350px;
+  min-width: 280px;
+  animation: fade-in 0.3s ease-in-out;
+  pointer-events: none; /* Prevents the preview from blocking mouse events */
+  transform: none; /* Remove vertical centering transformation */
+}
+
+.url-preview-card {
+  border: none;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: rgba(255, 255, 255, 0.98);
+  width: 100%; /* Ensure card uses container's max width */
+}
+
+.url-preview-card .card-body {
+  padding: 15px;
+}
+
+.preview-loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 15px 0;
+  text-align: center;
+}
+
+.preview-loading-animation {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.preview-loading-animation .spinner-border {
+  animation-duration: 1.5s;
+}
+
+.preview-loading-animation .spinner-grow:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.preview-loading-animation .spinner-grow:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.preview-loading-text {
+  color: #666;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.preview-summary {
+  font-size: 0.9rem;
+  color: #333;
+  line-height: 1.5;
+  overflow-wrap: break-word;
+  padding-right: 0;
+  white-space: normal; /* Ensure text can wrap */
+  min-height: 30px; /* Ensure short text has sufficient height */
+  margin-bottom: 12px; /* Add margin below summary for keywords section */
+}
+
+/* Ensure paragraphs display correctly */
+.preview-summary p {
+  margin-bottom: 0.5rem;
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* Keywords section styles */
+.preview-keywords {
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  padding-top: 12px;
+  animation: fade-in-up 0.4s ease-out;
+}
+
+.keywords-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.keywords-icon {
+  margin-right: 6px;
+  font-size: 0.8rem;
+  color: #6c757d;
+}
+
+.keywords-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Custom keyword tag component - not using Bootstrap Badge */
+.custom-keyword-tag {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 5px 8px;
+  border-radius: 12px;
+  cursor: default;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  animation: scale-in 0.3s ease-out;
+  animation-fill-mode: backwards;
+  color: #4B5563;
+}
+
+/* Add staggered animation delay to tags */
+.custom-keyword-tag:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.custom-keyword-tag:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.custom-keyword-tag:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.custom-keyword-tag:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+}
+
+.preview-error {
+  color: #dc3545;
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 10px 0;
+}
+
+.preview-link {
+  color: #6c757d;
+  transition: color 0.2s;
+  pointer-events: auto; /* Re-enable mouse events for the link */
+}
+
+.preview-link:hover {
+  color: #0d6efd;
+}
+
+/* Ensure preview stays in viewport */
+@media (max-width: 768px) {
+  .url-preview-container {
+    max-width: 280px;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+} 

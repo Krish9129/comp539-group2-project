@@ -1,10 +1,11 @@
 import React, { useState, useRef} from 'react';
-import { Card, Button, InputGroup, Form, OverlayTrigger, Tooltip, Modal, Spinner } from 'react-bootstrap';
-import { FaCopy, FaQrcode, FaCheck, FaExternalLinkAlt, FaDownload } from 'react-icons/fa';
+import { Card, Button, InputGroup, Form, OverlayTrigger, Tooltip, Modal, Spinner, Badge } from 'react-bootstrap';
+import { FaCopy, FaQrcode, FaCheck, FaExternalLinkAlt, FaDownload, FaLink, FaShareAlt, FaTimes } from 'react-icons/fa';
 import urlService from '../services/urlService';
+import UrlPreview from './UrlPreview';
 
-const UrlSuccessCard = ({ result }) => {
-  // Import urlService for API calls with authentication
+const UrlSuccessCard = ({ result, onClose }) => {
+  // State for clipboard functionality
   const [copied, setCopied] = useState(false);
   const urlRef = useRef(null);
   
@@ -13,8 +14,13 @@ const UrlSuccessCard = ({ result }) => {
   const [isQrLoading, setIsQrLoading] = useState(true);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   
+  // State for URL preview
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
+  
   const fullShortUrl = `http://${result.shortUrl}`;
   
+  // Handle copy to clipboard
   const handleCopy = () => {
     if (urlRef.current) {
       urlRef.current.select();
@@ -24,6 +30,7 @@ const UrlSuccessCard = ({ result }) => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Handle QR code view
   const handleViewQrCode = () => {
     setIsQrLoading(true);
     setShowQrModal(true);
@@ -37,78 +44,162 @@ const UrlSuccessCard = ({ result }) => {
     }
   };
   
+  // Handle QR code download
   const downloadQrCode = () => {
     const link = document.createElement('a');
     link.href = qrCodeUrl;
-    link.download = `qrcode-${result.shortId}.png`;
+    link.download = `zaplink-${result.shortId}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
+  // Handle mouse enter for preview
+  const handleMouseEnter = (e) => {
+    // Get mouse position relative to viewport
+    setPreviewPosition({ 
+      x: e.clientX,
+      y: e.clientY
+    });
+    setShowPreview(true);
+  };
+  
+  // Handle mouse move for updating position
+  const handleMouseMove = (e) => {
+    if (showPreview) {
+      // Update position based on current mouse coordinates
+      setPreviewPosition({ 
+        x: e.clientX,
+        y: e.clientY
+      });
+    }
+  };
+  
+  // Handle mouse leave for preview
+  const handleMouseLeave = () => {
+    setShowPreview(false);
+  };
+
+  // Handle close of success card
+  const handleClose = () => {
+    if (onClose) {
+      onClose();
+    }
+  };
+
   return (
     <>
-      <Card className="mb-4 border-success">
-        <Card.Header className="bg-success text-white">
-          <div className="d-flex align-items-center">
-            <FaCheck className="me-2" />
-            <span className="fw-bold">URL Shortened Successfully!</span>
+      <Card className="border-0 shadow-lg recently-created-card success-card">
+        <Card.Header className="bg-success text-white py-3 d-flex align-items-center">
+          <div className="success-icon-circle me-2">
+            <FaCheck />
           </div>
+          <h5 className="mb-0 flex-grow-1">Success! Your ZapLink is Ready</h5>
+          <Badge bg="light" text="success" className="py-2 px-3 me-2">New</Badge>
+          {onClose && (
+            <Button 
+              variant="link" 
+              className="p-0 text-white close-btn" 
+              onClick={handleClose}
+              aria-label="Close"
+            >
+              <FaTimes />
+            </Button>
+          )}
         </Card.Header>
         
-        <Card.Body>
-          <Card.Title className="text-muted fs-6 mb-2">Your short link is ready:</Card.Title>
-          
-          <InputGroup className="mb-3">
-            <Form.Control
-              ref={urlRef}
-              type="text"
-              value={fullShortUrl}
-              readOnly
-              className="bg-light border-primary"
-            />
-            <OverlayTrigger
-              placement="top"
-              overlay={<Tooltip>{copied ? "Copied!" : "Copy to clipboard"}</Tooltip>}
-            >
-              <Button 
-                variant={copied ? "success" : "outline-primary"}
-                onClick={handleCopy}
+        <Card.Body className="p-4">
+          {/* Link display and actions */}
+          <div className="mb-4">
+            <label className="form-label text-muted mb-2">Your short link:</label>
+            <InputGroup className="mb-3 shadow-sm">
+              <InputGroup.Text className="bg-light border-end-0">
+                <FaLink className="text-primary" />
+              </InputGroup.Text>
+              <Form.Control
+                ref={urlRef}
+                type="text"
+                value={fullShortUrl}
+                readOnly
+                className="bg-light border-start-0"
+                onMouseEnter={handleMouseEnter}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
+              />
+              <OverlayTrigger
+                placement="top"
+                overlay={<Tooltip>{copied ? "Copied!" : "Copy to clipboard"}</Tooltip>}
               >
-                {copied ? <FaCheck /> : <FaCopy />}
-              </Button>
-            </OverlayTrigger>
-            <OverlayTrigger
-              placement="top"
-              overlay={<Tooltip>Open in new tab</Tooltip>}
-            >
-              <Button 
-                variant="outline-primary"
-                as="a" 
-                href={fullShortUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
+                <Button 
+                  variant={copied ? "success" : "outline-primary"}
+                  onClick={handleCopy}
+                  className="d-flex align-items-center justify-content-center"
+                  style={{ width: '50px' }}
+                >
+                  {copied ? <FaCheck /> : <FaCopy />}
+                </Button>
+              </OverlayTrigger>
+              <OverlayTrigger
+                placement="top"
+                overlay={<Tooltip>Open in new tab</Tooltip>}
               >
-                <FaExternalLinkAlt />
-              </Button>
-            </OverlayTrigger>
-          </InputGroup>
-          
-          <div className="d-flex justify-content-between mt-3">
-            <div>
-              <span className="text-muted small">Short ID: </span>
-              <span className="fw-semibold small">{result.shortId}</span>
-            </div>
-            <Button 
-              variant="outline-info" 
-              size="sm"
-              onClick={handleViewQrCode}
-              className="d-flex align-items-center"
-            >
-              <FaQrcode className="me-2" /> 
-              <span>QR Code</span>
-            </Button>
+                <Button 
+                  variant="outline-primary"
+                  as="a" 
+                  href={fullShortUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="d-flex align-items-center justify-content-center"
+                  style={{ width: '50px' }}
+                >
+                  <FaExternalLinkAlt />
+                </Button>
+              </OverlayTrigger>
+            </InputGroup>
           </div>
+          
+          {/* Link details and additional options */}
+          <div className="d-flex flex-wrap justify-content-between align-items-center bg-light p-3 rounded">
+            <div className="mb-2 mb-md-0">
+              <span className="text-muted">Short ID: </span>
+              <span 
+                className="fw-semibold"
+                onMouseEnter={handleMouseEnter}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
+              >{result.shortId}</span>
+            </div>
+            <div className="d-flex gap-2 flex-wrap">
+              <Button 
+                variant="outline-primary" 
+                size="sm"
+                onClick={handleViewQrCode}
+                className="d-flex align-items-center"
+              >
+                <FaQrcode className="me-2" /> 
+                <span>QR Code</span>
+              </Button>
+              <Button 
+                variant="outline-success" 
+                size="sm"
+                as="a"
+                href={`https://wa.me/?text=${encodeURIComponent(`Check out this link: ${fullShortUrl}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="d-flex align-items-center"
+              >
+                <FaShareAlt className="me-2" /> 
+                <span>Share</span>
+              </Button>
+            </div>
+          </div>
+          
+          {/* URL Preview */}
+          <UrlPreview 
+            shortId={result.shortId} 
+            show={showPreview} 
+            position={previewPosition} 
+          />
         </Card.Body>
       </Card>
       
@@ -118,42 +209,50 @@ const UrlSuccessCard = ({ result }) => {
         onHide={() => setShowQrModal(false)}
         centered
         size="md"
+        className="qr-modal"
       >
-        <Modal.Header closeButton>
-          <Modal.Title>QR Code</Modal.Title>
+        <Modal.Header closeButton className="border-0 pb-0">
+          <Modal.Title className="text-primary">
+            <FaQrcode className="me-2" />
+            QR Code for Your ZapLink
+          </Modal.Title>
         </Modal.Header>
-        <Modal.Body className="text-center p-4">
-          <img 
-            src={qrCodeUrl} 
-            alt="QR Code" 
-            className="img-fluid" 
-            onLoad={() => setIsQrLoading(false)}
-            onError={() => setIsQrLoading(false)}
-            style={{ 
-              display: isQrLoading ? 'none' : 'inline-block',
-              width: '250px',
-              height: '250px'
-            }}
-          />
-          {isQrLoading && (
-            <div className="text-center p-4">
-              <Spinner animation="border" variant="primary" />
-              <p className="mt-2">Loading QR code...</p>
-            </div>
-          )}
-          <p className="mt-3 mb-0 text-muted small">Scan to open {result.shortUrl}</p>
+        <Modal.Body className="text-center px-4 pt-2 pb-4">
+          <p className="text-muted mb-4">Scan this code to open your shortened link</p>
+          
+          <div className="qr-container p-3 mb-3 mx-auto bg-light rounded shadow-sm" style={{ maxWidth: '280px' }}>
+            <img 
+              src={qrCodeUrl} 
+              alt="QR Code" 
+              className="img-fluid rounded" 
+              onLoad={() => setIsQrLoading(false)}
+              onError={() => setIsQrLoading(false)}
+              style={{ 
+                display: isQrLoading ? 'none' : 'block',
+                width: '250px',
+                height: '250px'
+              }}
+            />
+            {isQrLoading && (
+              <div className="text-center p-4 my-5">
+                <Spinner animation="border" variant="primary" />
+                <p className="mt-3">Loading QR code...</p>
+              </div>
+            )}
+          </div>
+          
+          <p className="mb-0 text-muted small">Link: {fullShortUrl}</p>
         </Modal.Body>
-        <Modal.Footer>
+        <Modal.Footer className="border-0 pt-0">
           <Button 
             variant="primary" 
-            size="sm"
             onClick={downloadQrCode}
+            className="px-4"
           >
-            <FaDownload className="me-1" /> Download
+            <FaDownload className="me-2" /> Download QR Code
           </Button>
           <Button 
-            variant="secondary" 
-            size="sm"
+            variant="light" 
             onClick={() => setShowQrModal(false)}
           >
             Close

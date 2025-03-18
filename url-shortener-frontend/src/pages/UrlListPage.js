@@ -1,4 +1,4 @@
-import React, { useState} from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import UrlCard from '../components/UrlCard';
 import urlService from '../services/urlService';
@@ -9,19 +9,18 @@ const UrlListPage = () => {
   const [error, setError] = useState('');
   const [urls, setUrls] = useState([]);
   
+  // Load all URLs when the component mounts
+  useEffect(() => {
+    fetchUrlsByTag('');
+  }, []);
+  
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!tag) {
-      setError('Please enter a tag');
-      return;
-    }
-    
     await fetchUrlsByTag(tag);
   };
   
-  // Fetch URLs by tag
+  // Fetch URLs by tag (if tag is empty, fetch all URLs)
   const fetchUrlsByTag = async (tagValue) => {
     setLoading(true);
     setError('');
@@ -31,6 +30,9 @@ const UrlListPage = () => {
       
       if (Array.isArray(data)) {
         setUrls(data);
+        if (data.length === 0) {
+          setError('No URLs found for this tag.');
+        }
       } else {
         // If response is a message rather than an array
         setUrls([]);
@@ -52,6 +54,17 @@ const UrlListPage = () => {
     setUrls(urls.filter(url => url.id !== deletedId));
   };
 
+  // Handle tag input change
+  const handleTagChange = (e) => {
+    const newTag = e.target.value;
+    setTag(newTag);
+    
+    // If the tag is cleared, fetch all URLs
+    if (!newTag.trim()) {
+      fetchUrlsByTag('');
+    }
+  };
+
   return (
     <Container>
       <Row>
@@ -64,9 +77,9 @@ const UrlListPage = () => {
               <div className="d-flex">
                 <Form.Control
                   type="text"
-                  placeholder="Enter tag name"
+                  placeholder="Enter tag name (leave empty for all URLs)"
                   value={tag}
-                  onChange={(e) => setTag(e.target.value)}
+                  onChange={handleTagChange}
                   className="me-2"
                 />
                 <Button 
@@ -100,7 +113,7 @@ const UrlListPage = () => {
                   ))}
                 </div>
               ) : (
-                !error && <Alert variant="light">No URLs found. Try searching with a different tag.</Alert>
+                !error && <Alert variant="light">No URLs found. Try clearing the search to view all your URLs.</Alert>
               )}
             </>
           )}

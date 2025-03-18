@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Card, Button, Badge, Modal, Spinner, Toast, ToastContainer } from 'react-bootstrap';
 import { FaQrcode, FaTrash, FaExternalLinkAlt, FaCopy, FaDownload, FaCheck, FaExclamationTriangle } from 'react-icons/fa';
 import urlService from '../services/urlService';
+import UrlAnalytics from './UrlAnalytics';
+import UrlPreview from './UrlPreview';
 
 const UrlCard = ({ url, onDelete }) => {
   const { id, originalUrl, tag, clickCount, lastAccess } = url;
@@ -15,6 +17,10 @@ const UrlCard = ({ url, onDelete }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  
+  // State for URL preview
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
   
   // Format last access time
   const formatLastAccess = (lastAccessStr) => {
@@ -80,6 +86,32 @@ const UrlCard = ({ url, onDelete }) => {
     link.click();
     document.body.removeChild(link);
   };
+  
+  // Handle mouse enter for preview
+  const handleMouseEnter = (e) => {
+    // Get mouse position relative to viewport
+    setPreviewPosition({ 
+      x: e.clientX,
+      y: e.clientY
+    });
+    setShowPreview(true);
+  };
+  
+  // Handle mouse move for updating position
+  const handleMouseMove = (e) => {
+    if (showPreview) {
+      // Update position based on current mouse coordinates
+      setPreviewPosition({ 
+        x: e.clientX,
+        y: e.clientY
+      });
+    }
+  };
+  
+  // Handle mouse leave for preview
+  const handleMouseLeave = () => {
+    setShowPreview(false);
+  };
 
   return (
     <>
@@ -102,9 +134,19 @@ const UrlCard = ({ url, onDelete }) => {
               target="_blank" 
               rel="noopener noreferrer"
               className="text-decoration-none"
+              onMouseEnter={handleMouseEnter}
+              onMouseMove={handleMouseMove}
+              onMouseLeave={handleMouseLeave}
             >
               {shortUrl}
             </a>
+            
+            {/* URL Preview */}
+            <UrlPreview 
+              shortId={id} 
+              show={showPreview} 
+              position={previewPosition} 
+            />
           </h5>
           <div>
             {tag && tag !== 'None' && (
@@ -158,6 +200,9 @@ const UrlCard = ({ url, onDelete }) => {
             >
               <FaQrcode /> QR Code
             </Button>
+            
+            {/* Analytics Button - Pass the id which is actually the shortId */}
+            <UrlAnalytics urlId={id} />
             
             <Button 
               variant="outline-danger" 

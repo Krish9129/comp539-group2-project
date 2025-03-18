@@ -86,6 +86,35 @@ const urlService = {
   // Get QR code URL
   getQrCodeUrl: (shortId) => {
     return `${API_BASE_URL}/${shortId}/qr`;
+  },
+  
+  // Get URL analytics data
+  getUrlAnalytics: async (shortId, date) => {
+    try {
+      // Ensure date is properly encoded
+      const encodedDate = encodeURIComponent(date);
+      console.log("Encoded date for API request:", encodedDate);
+      
+      // Make the API request with the date parameter
+      const response = await apiClient.get(`/${shortId}/analytics?date=${encodedDate}`);
+      
+      console.log("Analytics API response:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting URL analytics:', error);
+      throw error;
+    }
+  },
+  
+  // Get URL summary for preview
+  getUrlSummary: async (shortId) => {
+    try {
+      const response = await apiClient.get(`/${shortId}/summary`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting URL summary:', error);
+      throw error;
+    }
   }
 };
 

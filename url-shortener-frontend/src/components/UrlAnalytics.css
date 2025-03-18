@@ -1,0 +1,70 @@
+/* 自定义分析模态框样式 */
+.analytics-modal .modal-dialog {
+  max-width: 90%;
+  width: 1200px;
+}
+
+.analytics-modal .modal-content {
+  border-radius: 8px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+}
+
+.analytics-modal .modal-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #eee;
+}
+
+.analytics-modal .modal-title {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+/* 图表卡片样式 */
+.chart-card {
+  transition: all 0.3s ease;
+  border: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.chart-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* 日期选择器样式 */
+.react-datepicker-wrapper {
+  width: auto;
+}
+
+.react-datepicker__input-container input {
+  border-radius: 4px;
+  border: 1px solid #ced4da;
+  padding: 0.375rem 0.75rem;
+  font-size: 1rem;
+  transition: border-color 0.15s ease-in-out;
+}
+
+.react-datepicker__input-container input:focus {
+  border-color: #80bdff;
+  outline: 0;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* 统计数字卡片 */
+.stats-card {
+  border-radius: 8px;
+  padding: 15px 20px;
+  margin-bottom: 0;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .analytics-modal .modal-dialog {
+    width: 95%;
+  }
+  
+  .chart-container {
+    height: 180px !important;
+  }
+} 
