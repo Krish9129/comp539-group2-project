@@ -1,10 +1,9 @@
 import axios from 'axios';
-
-const API_BASE_URL = 'http://localhost:8080';
+import { AUTH_BASE_URL, OAUTH_BASE_URL } from '../config/config';
 
 // Create axios instance for auth
 const authClient = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: AUTH_BASE_URL,
   headers: {
     'Content-Type': 'application/json'
   }
@@ -34,7 +33,7 @@ const authService = {
   // Initiate OAuth login
   login: (provider) => {
     // Redirect to the backend authentication endpoint with full URL
-    const redirectUrl = `http://localhost:8080/oauth2/authorization/${provider}`;
+    const redirectUrl = `${OAUTH_BASE_URL}/${provider}`;
     window.location.href = redirectUrl;
   },
   

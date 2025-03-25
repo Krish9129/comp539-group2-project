@@ -9,6 +9,10 @@ import { SHORT_URL_BASE } from '../config/config';
 const UrlCard = ({ url, onDelete }) => {
   const { id, originalUrl, tag, clickCount, lastAccess } = url;
   const shortUrl = `${SHORT_URL_BASE}/${id}`;
+  // Get current environment
+  const isProduction = process.env.NODE_ENV === 'production';
+  // Display text will be just the ID in production, full URL in development
+  const displayText = isProduction ? id : shortUrl;
   
   // State for QR code modal
   const [showQrModal, setShowQrModal] = useState(false);
@@ -139,7 +143,7 @@ const UrlCard = ({ url, onDelete }) => {
               onMouseMove={handleMouseMove}
               onMouseLeave={handleMouseLeave}
             >
-              {shortUrl}
+              {displayText}
             </a>
             
             {/* URL Preview */}

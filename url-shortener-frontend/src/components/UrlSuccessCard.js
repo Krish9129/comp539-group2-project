@@ -3,7 +3,6 @@ import { Card, Button, InputGroup, Form, OverlayTrigger, Tooltip, Modal, Spinner
 import { FaCopy, FaQrcode, FaCheck, FaExternalLinkAlt, FaDownload, FaLink, FaShareAlt, FaTimes } from 'react-icons/fa';
 import urlService from '../services/urlService';
 import UrlPreview from './UrlPreview';
-import { SHORT_URL_BASE } from '../config/config';
 
 const UrlSuccessCard = ({ result, onClose }) => {
   // State for clipboard functionality
