@@ -5,6 +5,7 @@ import com.example.urlshortenerbackend.service.UrlService;
 import com.example.urlshortenerbackend.service.UrlSummaryService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
@@ -25,6 +26,9 @@ public class UrlController {
     private UrlSummaryService urlSummaryService;
 
     private final UrlService urlService;
+
+    @Value("${app.base-url:http://localhost:8080}")
+    private String baseUrl;
 
     public UrlController(UrlService urlService) {
         this.urlService = urlService;
@@ -53,7 +57,7 @@ public class UrlController {
             String shortId = urlService.createShortUrl(url, alias, tag, ownerId, isPrivate);
             Map<String, String> response = new HashMap<>();
             response.put("shortId", shortId);
-            response.put("shortUrl", "localhost:8080/api/" + shortId);
+            response.put("shortUrl", baseUrl + "/api/" + shortId);
             response.put("isPrivate", String.valueOf(isPrivate));
 
             if (ownerId != null) {
@@ -153,7 +157,7 @@ public class UrlController {
                 }
             }
 
-            String shortUrl = "http://localhost:8080/api/" + shortId; // Base URL + short ID
+            String shortUrl = baseUrl + "/api/" + shortId; // Base URL + short ID
             byte[] qrCode = urlService.generateQrCode(shortUrl, 300, 300);
 
             // Return as an image

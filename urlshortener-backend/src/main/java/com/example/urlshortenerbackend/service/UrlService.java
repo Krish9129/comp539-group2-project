@@ -25,6 +25,9 @@ public class UrlService {
 
     private final BigtableRepository bigtableRepository;
 
+    // Define a constant for CST timezone (US Central Time)
+    private static final ZoneId CST_ZONE = ZoneId.of("America/Chicago");
+
     public UrlService(BigtableRepository bigtableRepository) {
         this.bigtableRepository = bigtableRepository;
     }
@@ -140,10 +143,46 @@ public class UrlService {
     }
 
     public void logClickEvent(String shortId, HttpServletRequest request) {
-        String timestamp = Instant.now().toString();
+        // Store timestamp in CST timezone
+        ZonedDateTime cstNow = ZonedDateTime.now(CST_ZONE);
+        String timestamp = cstNow.toString();
         String rowKey = shortId + "_" + timestamp + "_" + UUID.randomUUID();
 
-        String ip = request.getRemoteAddr();
+        // get the real IP
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("Proxy-Client-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("WL-Proxy-Client-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_X_FORWARDED_FOR");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_X_FORWARDED");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_X_CLUSTER_CLIENT_IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_CLIENT_IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_FORWARDED_FOR");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_FORWARDED");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
+
+        // process multiple IP
+        if (ip != null && ip.contains(",")) {
+            ip = ip.split(",")[0].trim();
+        }
+
         String country = getCountryFromIP(ip);
         String userAgent = request.getHeader("User-Agent");
         String referer = request.getHeader("Referer") != null ? request.getHeader("Referer") : "Direct";
@@ -200,39 +239,62 @@ public class UrlService {
             try {
                 targetDate = LocalDate.parse(dateStr);
             } catch (DateTimeParseException e) {
-                // If date format is invalid, default to current date
-                targetDate = LocalDate.now();
+                // If date format is invalid, default to current date in CST
+                targetDate = LocalDate.now(CST_ZONE);
             }
         } else {
-            targetDate = LocalDate.now();
+            targetDate = LocalDate.now(CST_ZONE);
         }
 
-        // Get user's local timezone
-        ZoneId localZone = ZoneId.systemDefault();
-
-        // Calculate start and end time for the requested date in user's timezone
-        ZonedDateTime startOfDay = targetDate.atStartOfDay(localZone);
+        // Calculate start and end time for the requested date in CST
+        ZonedDateTime startOfDay = targetDate.atStartOfDay(CST_ZONE);
         ZonedDateTime endOfDay = startOfDay.plusDays(1).minusNanos(1);
-
-        // Convert to Instant for comparison with stored timestamps
-        Instant startInstant = startOfDay.toInstant();
-        Instant endInstant = endOfDay.toInstant();
 
         // Get all click data for the shortId
         List<Map<String, String>> allClickData = bigtableRepository.getClickData(shortId);
 
         // Filter and process click data for the specified date
         for (Map<String, String> click : allClickData) {
-            Instant clickTime = Instant.parse(click.get("timestamp"));
+            // Parse timestamp from CST format
+            ZonedDateTime clickTime;
+            try {
+                // Parse the timestamp and ensure it's interpreted as CST
+                String timestampStr = click.get("timestamp");
+
+                // If timestamp ends with Z (UTC marker), we need to convert it to CST
+                if (timestampStr.endsWith("Z")) {
+                    // Parse as UTC instant and convert to CST
+                    Instant instant = Instant.parse(timestampStr);
+                    clickTime = instant.atZone(CST_ZONE);
+                } else {
+                    // Try to parse directly - it might already be in a zoned format
+                    try {
+                        clickTime = ZonedDateTime.parse(timestampStr);
+                    } catch (DateTimeParseException e) {
+                        // If it's not a zoned format, try parsing with offset
+                        try {
+                            OffsetDateTime offsetDateTime = OffsetDateTime.parse(timestampStr);
+                            clickTime = offsetDateTime.atZoneSameInstant(CST_ZONE);
+                        } catch (DateTimeParseException ex) {
+                            // Last resort - treat as local date time in CST
+                            LocalDateTime localDateTime = LocalDateTime.parse(timestampStr,
+                                    DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                            clickTime = localDateTime.atZone(CST_ZONE);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // Skip this click if timestamp cannot be parsed
+                continue;
+            }
 
             // Skip if the click is not within the target date
-            if (clickTime.isBefore(startInstant) || clickTime.isAfter(endInstant)) {
+            if (clickTime.isBefore(startOfDay) || clickTime.isAfter(endOfDay)) {
                 continue;
             }
 
             // Process click data for the specified date
-            ZonedDateTime localTime = clickTime.atZone(localZone);
-            int hour = localTime.getHour();
+            int hour = clickTime.getHour();
             clicksPerHour.put(hour, clicksPerHour.get(hour) + 1);
 
             // Process device type
@@ -261,6 +323,7 @@ public class UrlService {
         // Prepare response data
         Map<String, Object> analyticsData = new HashMap<>();
         analyticsData.put("date", targetDate.toString());
+        analyticsData.put("timezone", "CST (America/Chicago)");
         analyticsData.put("clicks_per_hour", clicksPerHour);
         analyticsData.put("device_distribution", deviceDistribution);
         analyticsData.put("browser_distribution", browserDistribution);
