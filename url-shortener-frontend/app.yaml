@@ -1,6 +1,10 @@
 runtime: nodejs18
 service: zaplink
 
+env_variables:
+  NODE_ENV: production
+  # local_ENV: development
+
 handlers:
   # 服务端 API 请求处理（如果有）
   - url: /api/.*

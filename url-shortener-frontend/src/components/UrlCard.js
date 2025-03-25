@@ -4,10 +4,11 @@ import { FaQrcode, FaTrash, FaExternalLinkAlt, FaCopy, FaDownload, FaCheck, FaEx
 import urlService from '../services/urlService';
 import UrlAnalytics from './UrlAnalytics';
 import UrlPreview from './UrlPreview';
+import { SHORT_URL_BASE } from '../config/config';
 
 const UrlCard = ({ url, onDelete }) => {
   const { id, originalUrl, tag, clickCount, lastAccess } = url;
-  const shortUrl = `localhost:8080/api/${id}`;
+  const shortUrl = `${SHORT_URL_BASE}/${id}`;
   
   // State for QR code modal
   const [showQrModal, setShowQrModal] = useState(false);
