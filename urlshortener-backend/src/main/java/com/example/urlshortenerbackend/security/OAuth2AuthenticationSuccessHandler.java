@@ -18,7 +18,7 @@ import java.util.Map;
 @Component
 public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
-    @Value("${app.frontend.url:http://localhost:3000}")
+    @Value("${app.frontend.url}")
     private String frontendUrl;
 
     @Autowired

@@ -1,11 +1,20 @@
 runtime: nodejs18
-service: urlshortener-frontend
+service: zaplink
 
 handlers:
-  - url: /
+  # 服务端 API 请求处理（如果有）
+  - url: /api/.*
+    script: auto
+    secure: always
+
+  # 静态资源处理
+  - url: /(.*\.(js|css|png|jpg|jpeg|gif|ico|json|svg|woff|woff2|ttf|eot))
+    static_files: build/\1
+    upload: build/.*\.(js|css|png|jpg|jpeg|gif|ico|json|svg|woff|woff2|ttf|eot)
+    secure: always
+
+  # 所有其他请求回退到 index.html 以支持客户端路由
+  - url: /.*
     static_files: build/index.html
     upload: build/index.html
-
-  - url: /(.*)
-    static_files: build/\1
-    upload: build/(.*)
+    secure: always
