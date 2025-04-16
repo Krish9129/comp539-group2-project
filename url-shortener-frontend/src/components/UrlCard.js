@@ -1,11 +1,19 @@
 import React, { useState } from 'react';
 import { Card, Button, Badge, Modal, Spinner, Toast, ToastContainer } from 'react-bootstrap';
-import { FaQrcode, FaTrash, FaExternalLinkAlt, FaCopy, FaDownload, FaCheck, FaExclamationTriangle } from 'react-icons/fa';
+import { FaQrcode, FaTrash, FaExternalLinkAlt, FaCopy, FaDownload, FaCheck, FaExclamationTriangle, FaShareAlt } from 'react-icons/fa';
 import urlService from '../services/urlService';
 import UrlAnalytics from './UrlAnalytics';
 import UrlPreview from './UrlPreview';
+import ShareModal from './ShareModal';
 import { SHORT_URL_BASE } from '../config/config';
 
+/**
+ * UrlCard component displays a saved short URL with various actions
+ * 
+ * @param {Object} props Component props
+ * @param {Object} props.url The URL object with details
+ * @param {Function} props.onDelete Callback when URL is deleted
+ */
 const UrlCard = ({ url, onDelete }) => {
   const { id, originalUrl, tag, clickCount, lastAccess } = url;
   const shortUrl = `${SHORT_URL_BASE}/${id}`;
@@ -26,6 +34,9 @@ const UrlCard = ({ url, onDelete }) => {
   // State for URL preview
   const [showPreview, setShowPreview] = useState(false);
   const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
+  
+  // State for share modal
+  const [showShareModal, setShowShareModal] = useState(false);
   
   // Format last access time
   const formatLastAccess = (lastAccessStr) => {
@@ -189,12 +200,12 @@ const UrlCard = ({ url, onDelete }) => {
             </Button>
             
             <Button 
-              variant="outline-primary" 
+              variant="outline-success" 
               size="sm" 
               className="me-2"
-              onClick={() => window.open(`http://${shortUrl}`, '_blank')}
+              onClick={() => setShowShareModal(true)}
             >
-              <FaExternalLinkAlt /> Visit
+              <FaShareAlt /> Share
             </Button>
             
             <Button 
@@ -248,19 +259,19 @@ const UrlCard = ({ url, onDelete }) => {
               <p className="mt-2">Loading QR code...</p>
             </div>
           )}
-          <p className="mt-3 mb-0 text-muted small">Scan to open {shortUrl}</p>
+          <p className="mt-3 mb-0 text-muted">
+            Scan this code to access: {displayText}
+          </p>
         </Modal.Body>
         <Modal.Footer>
           <Button 
             variant="primary" 
-            size="sm"
             onClick={downloadQrCode}
           >
-            <FaDownload className="me-1" /> Download
+            <FaDownload className="me-2" /> Download
           </Button>
           <Button 
             variant="secondary" 
-            size="sm"
             onClick={() => setShowQrModal(false)}
           >
             Close
@@ -268,44 +279,33 @@ const UrlCard = ({ url, onDelete }) => {
         </Modal.Footer>
       </Modal>
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete confirmation modal */}
       <Modal
         show={showDeleteModal}
-        onHide={() => !isDeleting && setShowDeleteModal(false)}
+        onHide={() => setShowDeleteModal(false)}
         centered
-        size="md"
       >
-        <Modal.Header closeButton={!isDeleting} className="bg-danger text-white">
-          <Modal.Title>
-            <FaExclamationTriangle className="me-2" />
-            Confirm Deletion
-          </Modal.Title>
+        <Modal.Header closeButton>
+          <Modal.Title>Confirm Delete</Modal.Title>
         </Modal.Header>
-        <Modal.Body className="p-4">
-          <p>Are you sure you want to delete this short URL?</p>
-          <div className="border rounded p-3 bg-light mb-3">
-            <div className="fw-bold text-truncate">{shortUrl}</div>
-            <div className="text-muted small text-truncate">{originalUrl}</div>
-          </div>
-          <p className="text-danger mb-0"><strong>Warning:</strong> This action cannot be undone.</p>
+        <Modal.Body>
+          Are you sure you want to delete this short URL? This action cannot be undone.
+          
           {deleteError && (
-            <div className="alert alert-danger mt-3 mb-0">
-              {deleteError}
-            </div>
+            <div className="alert alert-danger mt-3">{deleteError}</div>
           )}
         </Modal.Body>
         <Modal.Footer>
-          <Button
-            variant="secondary"
-            disabled={isDeleting}
+          <Button 
+            variant="secondary" 
             onClick={() => setShowDeleteModal(false)}
           >
             Cancel
           </Button>
-          <Button
-            variant="danger"
-            disabled={isDeleting}
+          <Button 
+            variant="danger" 
             onClick={handleDelete}
+            disabled={isDeleting}
           >
             {isDeleting ? (
               <>
@@ -320,13 +320,19 @@ const UrlCard = ({ url, onDelete }) => {
                 Deleting...
               </>
             ) : (
-              <>
-                <FaTrash className="me-2" /> Delete Permanently
-              </>
+              'Delete'
             )}
           </Button>
         </Modal.Footer>
       </Modal>
+
+      {/* Share Modal */}
+      <ShareModal
+        show={showShareModal}
+        onHide={() => setShowShareModal(false)}
+        shortId={id}
+        shortUrl={`http://${shortUrl}`}
+      />
     </>
   );
 };

@@ -1,9 +1,18 @@
-import React, { useState, useRef} from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Card, Button, InputGroup, Form, OverlayTrigger, Tooltip, Modal, Spinner, Badge } from 'react-bootstrap';
 import { FaCopy, FaQrcode, FaCheck, FaExternalLinkAlt, FaDownload, FaLink, FaShareAlt, FaTimes } from 'react-icons/fa';
 import urlService from '../services/urlService';
 import UrlPreview from './UrlPreview';
+import ShareModal from './ShareModal';
+import './UrlSuccessCard.css';
 
+/**
+ * UrlSuccessCard component displays a newly created short URL with various actions
+ * 
+ * @param {Object} props Component props
+ * @param {Object} props.result The result object from URL shortening
+ * @param {Function} props.onClose Optional callback when card is closed
+ */
 const UrlSuccessCard = ({ result, onClose }) => {
   // State for clipboard functionality
   const [copied, setCopied] = useState(false);
@@ -17,6 +26,9 @@ const UrlSuccessCard = ({ result, onClose }) => {
   // State for URL preview
   const [showPreview, setShowPreview] = useState(false);
   const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
+  
+  // State for share modal
+  const [showShareModal, setShowShareModal] = useState(false);
   
   const fullShortUrl = `${result.shortUrl}`;
   
@@ -179,14 +191,13 @@ const UrlSuccessCard = ({ result, onClose }) => {
                 <FaQrcode className="me-2" /> 
                 <span>QR Code</span>
               </Button>
+              
+              {/* Share button */}
               <Button 
                 variant="outline-success" 
                 size="sm"
-                as="a"
-                href={`https://wa.me/?text=${encodeURIComponent(`Check out this link: ${fullShortUrl}`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="d-flex align-items-center"
+                onClick={() => setShowShareModal(true)}
+                className="d-flex align-items-center share-btn"
               >
                 <FaShareAlt className="me-2" /> 
                 <span>Share</span>
@@ -259,6 +270,14 @@ const UrlSuccessCard = ({ result, onClose }) => {
           </Button>
         </Modal.Footer>
       </Modal>
+
+      {/* Share Modal */}
+      <ShareModal
+        show={showShareModal}
+        onHide={() => setShowShareModal(false)}
+        shortId={result.shortId}
+        shortUrl={fullShortUrl}
+      />
     </>
   );
 };

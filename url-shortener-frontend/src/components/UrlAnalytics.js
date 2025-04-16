@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Button, Spinner, Form, Row, Col, Card } from 'react-bootstrap';
-import { FaChartBar, FaCalendarAlt, FaMousePointer } from 'react-icons/fa';
+import { Modal, Button, Spinner, Row, Col, Card, ButtonGroup } from 'react-bootstrap';
+import { FaChartBar, FaCalendarAlt, FaMousePointer, FaCalendarWeek, FaCalendarDay } from 'react-icons/fa';
 import { 
   Chart as ChartJS, 
   CategoryScale, 
@@ -13,7 +13,7 @@ import {
   PointElement,
   LineElement
 } from 'chart.js';
-import { Bar, Pie, Line } from 'react-chartjs-2';
+import { Pie, Line } from 'react-chartjs-2';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import urlService from '../services/urlService';
@@ -42,6 +42,9 @@ const UrlAnalytics = ({ urlId }) => {
   // State for date selection
   const [selectedDate, setSelectedDate] = useState(new Date());
   
+  // State for time range selection
+  const [timeRange, setTimeRange] = useState('daily');
+  
   // Loading and error states
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -62,17 +65,6 @@ const UrlAnalytics = ({ urlId }) => {
     return `${year}-${month}-${day}`;
   };
 
-  // Format date for display
-  const formatDateForDisplay = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric',
-      weekday: 'long'
-    });
-  };
-
   // Fetch analytics data
   const fetchAnalytics = async () => {
     setLoading(true);
@@ -80,10 +72,9 @@ const UrlAnalytics = ({ urlId }) => {
     
     try {
       const formattedDate = formatDateForApi(selectedDate);
-      console.log("Requesting analytics for date:", formattedDate); // Debug log
       
       // Use shortId instead of urlId for the API call
-      const data = await urlService.getUrlAnalytics(shortId, formattedDate);
+      const data = await urlService.getUrlAnalytics(shortId, formattedDate, timeRange);
       setAnalyticsData(data);
       
       // Debug log to check the received data
@@ -96,18 +87,22 @@ const UrlAnalytics = ({ urlId }) => {
     }
   };
 
-  // When modal is opened or date changes, fetch data
+  // When modal is opened or date changes or timeRange changes, fetch data
   useEffect(() => {
     if (showModal) {
       fetchAnalytics();
     }
-  }, [showModal, selectedDate]);
+  }, [showModal, selectedDate, timeRange]);
 
   // Handle date change
   const handleDateChange = (date) => {
     // Update the date state - this will trigger the useEffect
     setSelectedDate(date);
-    console.log("Date selected:", date); // Debug log
+  };
+
+  // Handle time range change
+  const handleTimeRangeChange = (range) => {
+    setTimeRange(range);
   };
 
   // Get colors for charts
@@ -144,13 +139,58 @@ const UrlAnalytics = ({ urlId }) => {
   const prepareChartData = () => {
     if (!analyticsData) return null;
 
-    // Clicks Per Hour
-    const clicksPerHourData = {
-      labels: Array.from({ length: 24 }, (_, i) => `${i}:00`),
+    // Get appropriate labels and data based on timeRange
+    const getTimeLabelsAndData = () => {
+      if (timeRange === 'daily') {
+        // For daily: fixed 24 hours
+        return {
+          labels: Array.from({ length: 24 }, (_, i) => `${i}:00`),
+          data: Object.values(analyticsData.clicks_per_hour || {})
+        };
+      } else if (timeRange === 'weekly') {
+        // For weekly: get actual week start dates from the data
+        const weekData = analyticsData.clicks_per_week || {};
+        const sortedKeys = Object.keys(weekData).sort();
+        
+        // Format the date labels to be more readable (MM/DD)
+        const formattedLabels = sortedKeys.map(dateStr => {
+          const date = new Date(dateStr);
+          return `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
+        });
+        
+        return {
+          labels: formattedLabels,
+          data: sortedKeys.map(key => weekData[key])
+        };
+      } else if (timeRange === 'monthly') {
+        // For monthly: get actual months from the data
+        const monthData = analyticsData.clicks_per_month || {};
+        const sortedKeys = Object.keys(monthData).sort();
+        
+        // Format the month labels to be more readable (MMM YYYY)
+        const formattedLabels = sortedKeys.map(monthStr => {
+          const [year, month] = monthStr.split('-');
+          const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+          return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        });
+        
+        return {
+          labels: formattedLabels,
+          data: sortedKeys.map(key => monthData[key])
+        };
+      }
+      return { labels: [], data: [] };
+    };
+
+    const { labels, data } = getTimeLabelsAndData();
+
+    // Clicks Distribution (per hour, day, or month)
+    const clicksDistributionData = {
+      labels: labels,
       datasets: [
         {
           label: 'Clicks',
-          data: Object.values(analyticsData.clicks_per_hour),
+          data: data,
           backgroundColor: 'rgba(54, 162, 235, 0.5)',
           borderColor: 'rgba(54, 162, 235, 1)',
           borderWidth: 1,
@@ -159,12 +199,12 @@ const UrlAnalytics = ({ urlId }) => {
     };
     
     // Device Distribution
-    const deviceLabels = Object.keys(analyticsData.device_distribution);
+    const deviceLabels = Object.keys(analyticsData.device_distribution || {});
     const deviceData = {
       labels: deviceLabels,
       datasets: [
         {
-          data: Object.values(analyticsData.device_distribution),
+          data: Object.values(analyticsData.device_distribution || {}),
           backgroundColor: getColors(deviceLabels.length),
           borderWidth: 1,
         },
@@ -172,12 +212,12 @@ const UrlAnalytics = ({ urlId }) => {
     };
     
     // Country Distribution
-    const countryLabels = Object.keys(analyticsData.country_distribution);
+    const countryLabels = Object.keys(analyticsData.country_distribution || {});
     const countryData = {
       labels: countryLabels,
       datasets: [
         {
-          data: Object.values(analyticsData.country_distribution),
+          data: Object.values(analyticsData.country_distribution || {}),
           backgroundColor: getColors(countryLabels.length),
           borderWidth: 1,
         },
@@ -185,12 +225,12 @@ const UrlAnalytics = ({ urlId }) => {
     };
     
     // Browser Distribution
-    const browserLabels = Object.keys(analyticsData.browser_distribution);
+    const browserLabels = Object.keys(analyticsData.browser_distribution || {});
     const browserData = {
       labels: browserLabels,
       datasets: [
         {
-          data: Object.values(analyticsData.browser_distribution),
+          data: Object.values(analyticsData.browser_distribution || {}),
           backgroundColor: getColors(browserLabels.length),
           borderWidth: 1,
         },
@@ -198,7 +238,7 @@ const UrlAnalytics = ({ urlId }) => {
     };
     
     return {
-      clicksPerHour: clicksPerHourData,
+      clicksDistribution: clicksDistributionData,
       deviceDistribution: deviceData,
       countryDistribution: countryData,
       browserDistribution: browserData,
@@ -217,17 +257,51 @@ const UrlAnalytics = ({ urlId }) => {
       },
       title: {
         display: true,
-        text: 'Hourly Click Distribution',
+        text: timeRange === 'daily' ? 'Daily Click Distribution' : 
+              timeRange === 'weekly' ? 'Weekly Click Distribution' : 
+              'Monthly Click Distribution',
         font: {
           size: 16
         }
       },
+      tooltip: {
+        callbacks: {
+          title: function(tooltipItems) {
+            const item = tooltipItems[0];
+            if (timeRange === 'daily') {
+              return `Hour: ${item.label}`;
+            } else if (timeRange === 'weekly') {
+              return `Week starting: ${item.label}`;
+            } else {
+              return item.label;
+            }
+          },
+          label: function(context) {
+            return `  Clicks: ${context.raw}`;
+          }
+        }
+      }
     },
     scales: {
+      x: {
+        ticks: {
+          maxRotation: timeRange === 'monthly' ? 0 : 0,
+          minRotation: 0,
+          autoSkip: true,
+          maxTicksLimit: timeRange === 'daily' ? 24 : 
+                         timeRange === 'weekly' ? 12 : 12
+        },
+        grid: {
+          display: false
+        }
+      },
       y: {
         beginAtZero: true,
         ticks: {
           precision: 0 // Only show integer values
+        },
+        grid: {
+          color: 'rgba(0, 0, 0, 0.05)'
         }
       }
     }
@@ -243,6 +317,17 @@ const UrlAnalytics = ({ urlId }) => {
           boxWidth: 12,
           font: {
             size: 10
+          }
+        }
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            const label = context.label || '';
+            const value = context.raw || 0;
+            const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+            const percentage = Math.round((value / total) * 100);
+            return `${label}: ${value} (${percentage}%)`;
           }
         }
       },
@@ -263,7 +348,7 @@ const UrlAnalytics = ({ urlId }) => {
         onClick={() => setShowModal(true)}
         className="me-2"
       >
-        <FaChartBar /> Analytics
+        <FaChartBar /> analytics
       </Button>
 
       <Modal 
@@ -274,37 +359,64 @@ const UrlAnalytics = ({ urlId }) => {
         centered
       >
         <Modal.Header closeButton>
-          <Modal.Title>URL Traffic Analytics</Modal.Title>
+          <Modal.Title>URL Analytics</Modal.Title>
         </Modal.Header>
         <Modal.Body style={{ padding: '20px 30px' }}>
-          <div className="d-flex justify-content-between align-items-center mb-4">
-            <div className="d-flex align-items-center">
-              <span className="me-2">
-                <FaCalendarAlt className="me-1" /> Select Date:
-              </span>
-              <DatePicker
-                selected={selectedDate}
-                onChange={handleDateChange}
-                className="form-control"
-                dateFormat="yyyy-MM-dd"
-                maxDate={new Date()}
-              />
-            </div>
-            
-            {analyticsData && (
+          <Row className="align-items-center mb-4">
+            <Col md={6}>
               <div className="d-flex align-items-center">
-                <Card className="bg-primary text-white mb-0 px-4 py-2 stats-card">
-                  <div className="d-flex align-items-center">
-                    <FaMousePointer className="me-2" />
-                    <div>
-                      <h5 className="mb-0">Total Clicks: {analyticsData.total_clicks}</h5>
-                      <small>Date: {formatDateForApi(selectedDate)}</small>
-                    </div>
-                  </div>
-                </Card>
+                <span className="me-2">
+                  <FaCalendarAlt className="me-1" /> Select Date:
+                </span>
+                <DatePicker
+                  selected={selectedDate}
+                  onChange={handleDateChange}
+                  className="form-control"
+                  dateFormat="yyyy-MM-dd"
+                  maxDate={new Date()}
+                />
               </div>
-            )}
-          </div>
+            </Col>
+            
+            <Col md={6}>
+              <div className="d-flex justify-content-end">
+                <ButtonGroup className="time-range-selector">
+                  <Button 
+                    variant={timeRange === 'daily' ? 'primary' : 'outline-primary'} 
+                    onClick={() => handleTimeRangeChange('daily')}
+                  >
+                    <FaCalendarDay className="me-1" /> Daily
+                  </Button>
+                  <Button 
+                    variant={timeRange === 'weekly' ? 'primary' : 'outline-primary'} 
+                    onClick={() => handleTimeRangeChange('weekly')}
+                  >
+                    <FaCalendarWeek className="me-1" /> Weekly
+                  </Button>
+                  <Button 
+                    variant={timeRange === 'monthly' ? 'primary' : 'outline-primary'} 
+                    onClick={() => handleTimeRangeChange('monthly')}
+                  >
+                    <FaCalendarAlt className="me-1" /> Monthly
+                  </Button>
+                </ButtonGroup>
+              </div>
+            </Col>
+          </Row>
+          
+          {analyticsData && (
+            <div className="d-flex justify-content-center mb-4">
+              <Card className="bg-primary text-white mb-0 px-4 py-2 stats-card">
+                <div className="d-flex align-items-center">
+                  <FaMousePointer className="me-2" />
+                  <div>
+                    <h5 className="mb-0">Total Clicks: {analyticsData.total_clicks}</h5>
+                    <small>Statistical Period: {timeRange === 'daily' ? 'Day' : timeRange === 'weekly' ? 'Week' : 'Month'}</small>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
 
           {error && (
             <div className="alert alert-danger">{error}</div>
@@ -320,7 +432,7 @@ const UrlAnalytics = ({ urlId }) => {
               <div>
                 <div className="mb-4">
                   <div style={{ height: '300px', marginBottom: '40px' }}>
-                    {chartData && <Line data={chartData.clicksPerHour} options={lineOptions} />}
+                    {chartData && <Line data={chartData.clicksDistribution} options={lineOptions} />}
                   </div>
                 </div>
                 
@@ -350,7 +462,7 @@ const UrlAnalytics = ({ urlId }) => {
                   <div className="col-md-4 mb-4">
                     <Card className="h-100 shadow-sm chart-card">
                       <Card.Body>
-                        <h6 className="text-center mb-3 fw-bold">Country Distribution</h6>
+                        <h6 className="text-center mb-3 fw-bold">Country/Region Distribution</h6>
                         <div className="chart-container" style={{ height: '220px' }}>
                           {chartData && <Pie data={chartData.countryDistribution} options={pieOptions} />}
                         </div>
