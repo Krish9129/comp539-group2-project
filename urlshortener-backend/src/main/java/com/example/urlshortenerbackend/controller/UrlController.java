@@ -251,8 +251,10 @@ public class UrlController {
     @GetMapping("/{shortId}/analytics")
     public ResponseEntity<Map<String, Object>> getAnalytics(
             @PathVariable String shortId,
-            @RequestParam(required = false) String date) {
-        Map<String, Object> analyticsData = urlService.getAnalytics(shortId, date);
+            @RequestParam(required = false) String date,
+            @RequestParam(required = false) String timeRange) {
+
+        Map<String, Object> analyticsData = urlService.getAnalytics(shortId, date, timeRange);
         return ResponseEntity.ok(analyticsData);
     }
 

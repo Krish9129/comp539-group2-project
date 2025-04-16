@@ -19,6 +19,10 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
+import java.time.DayOfWeek;
+import java.time.YearMonth;
+import java.time.temporal.ChronoUnit;
+import java.util.LinkedHashMap;
 
 @Service
 public class UrlService {
@@ -193,13 +197,35 @@ public class UrlService {
     }
 
     /**
-     * Gets analytics data for a short URL for a specific date.
+     * Gets analytics data for a short URL based on specified time range.
      *
      * @param shortId The ID of the shortened URL
-     * @param dateStr Date in ISO format (yyyy-MM-dd). If null, returns data for the current day.
-     * @return Map containing analytics data organized by categories with default values for common types
+     * @param dateStr Date in ISO format (yyyy-MM-dd) for daily analytics. If null, returns data for the current day.
+     * @param timeRange The time range for analytics: "daily", "weekly", or "monthly"
+     * @return Map containing analytics data organized by the specified time range
      */
-    public Map<String, Object> getAnalytics(String shortId, String dateStr) {
+    public Map<String, Object> getAnalytics(String shortId, String dateStr, String timeRange) {
+        // Default to daily if timeRange is not specified
+        if (timeRange == null || timeRange.isEmpty()) {
+            timeRange = "daily";
+        }
+
+        switch (timeRange.toLowerCase()) {
+            case "weekly":
+                return getWeeklyAnalytics(shortId);
+            case "monthly":
+                return getMonthlyAnalytics(shortId);
+            case "daily":
+            default:
+                return getDailyAnalytics(shortId, dateStr);
+        }
+    }
+
+    /**
+     * Original daily analytics method, renamed to be consistent with new structure.
+     */
+    private Map<String, Object> getDailyAnalytics(String shortId, String dateStr) {
+        // This is your existing implementation from getAnalytics
         // Initialize counters for analytics with default values of 0
         Map<Integer, Long> clicksPerHour = new HashMap<>();
         for (int i = 0; i < 24; i++) {
@@ -222,10 +248,7 @@ public class UrlService {
         browserDistribution.put("Other", 0L);
 
         // Initialize country distribution with most common countries
-        // We'll add actual data to this map, but won't pre-populate with too many countries
         Map<String, Long> countryDistribution = new HashMap<>();
-
-        // Add a few major countries that are commonly seen in analytics
         countryDistribution.put("United States", 0L);
         countryDistribution.put("China", 0L);
         countryDistribution.put("India", 0L);
@@ -329,6 +352,254 @@ public class UrlService {
         analyticsData.put("browser_distribution", browserDistribution);
         analyticsData.put("country_distribution", countryDistribution);
         analyticsData.put("total_clicks", clicksPerHour.values().stream().mapToLong(Long::longValue).sum());
+
+        return analyticsData;
+    }
+
+    /**
+     * Gets weekly analytics data for a short URL for the past 12 weeks.
+     *
+     * @param shortId The ID of the shortened URL
+     * @return Map containing analytics data organized by weeks
+     */
+    private Map<String, Object> getWeeklyAnalytics(String shortId) {
+        // Get current date in CST
+        ZonedDateTime currentDate = ZonedDateTime.now(CST_ZONE);
+
+        // Create a map to store clicks per week
+        Map<String, Long> clicksPerWeek = new LinkedHashMap<>();
+
+        // Initialize data for past 12 weeks (including current week)
+        for (int i = 11; i >= 0; i--) {
+            ZonedDateTime weekStart = currentDate.minusWeeks(i).with(java.time.temporal.TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY));
+            LocalDate weekDate = weekStart.toLocalDate();
+            String weekLabel = weekDate.toString(); // Use the Sunday date as week label
+            clicksPerWeek.put(weekLabel, 0L);
+        }
+
+        // Create distributions for aggregated data
+        Map<String, Long> deviceDistribution = new HashMap<>();
+        deviceDistribution.put("Desktop", 0L);
+        deviceDistribution.put("Mobile", 0L);
+        deviceDistribution.put("Tablet", 0L);
+
+        Map<String, Long> browserDistribution = new HashMap<>();
+        browserDistribution.put("Chrome", 0L);
+        browserDistribution.put("Firefox", 0L);
+        browserDistribution.put("Safari", 0L);
+        browserDistribution.put("Edge", 0L);
+        browserDistribution.put("Internet Explorer", 0L);
+        browserDistribution.put("Other", 0L);
+
+        Map<String, Long> countryDistribution = new HashMap<>();
+        countryDistribution.put("United States", 0L);
+        countryDistribution.put("China", 0L);
+        countryDistribution.put("India", 0L);
+        countryDistribution.put("United Kingdom", 0L);
+        countryDistribution.put("Germany", 0L);
+        countryDistribution.put("Unknown", 0L);
+
+        // Calculate start of the period (12 weeks ago)
+        ZonedDateTime startOfPeriod = currentDate.minusWeeks(12)
+                .with(java.time.temporal.TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY))
+                .truncatedTo(ChronoUnit.DAYS);
+
+        // Get all click data for the shortId
+        List<Map<String, String>> allClickData = bigtableRepository.getClickData(shortId);
+
+        // Process each click
+        for (Map<String, String> click : allClickData) {
+            ZonedDateTime clickTime;
+            try {
+                String timestampStr = click.get("timestamp");
+
+                if (timestampStr.endsWith("Z")) {
+                    Instant instant = Instant.parse(timestampStr);
+                    clickTime = instant.atZone(CST_ZONE);
+                } else {
+                    try {
+                        clickTime = ZonedDateTime.parse(timestampStr);
+                    } catch (DateTimeParseException e) {
+                        try {
+                            OffsetDateTime offsetDateTime = OffsetDateTime.parse(timestampStr);
+                            clickTime = offsetDateTime.atZoneSameInstant(CST_ZONE);
+                        } catch (DateTimeParseException ex) {
+                            LocalDateTime localDateTime = LocalDateTime.parse(timestampStr,
+                                    DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                            clickTime = localDateTime.atZone(CST_ZONE);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                continue; // Skip if timestamp can't be parsed
+            }
+
+            // Skip if the click is before the start of our 12-week period
+            if (clickTime.isBefore(startOfPeriod)) {
+                continue;
+            }
+
+            // Find which week this click belongs to
+            ZonedDateTime weekStart = clickTime.with(java.time.temporal.TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY))
+                    .truncatedTo(ChronoUnit.DAYS);
+            String weekLabel = weekStart.toLocalDate().toString();
+
+            // Increment the count for this week
+            if (clicksPerWeek.containsKey(weekLabel)) {
+                clicksPerWeek.put(weekLabel, clicksPerWeek.get(weekLabel) + 1);
+            }
+
+            // Aggregate distribution data
+            String device = click.get("device_type");
+            deviceDistribution.put(device, deviceDistribution.getOrDefault(device, 0L) + 1);
+
+            String browser = click.get("browser");
+            if (browserDistribution.containsKey(browser)) {
+                browserDistribution.put(browser, browserDistribution.get(browser) + 1);
+            } else {
+                browserDistribution.put("Other", browserDistribution.get("Other") + 1);
+            }
+
+            String country = click.get("country");
+            if (country == null || country.isEmpty() || country.equals("Unknown")) {
+                countryDistribution.put("Unknown", countryDistribution.getOrDefault("Unknown", 0L) + 1);
+            } else {
+                countryDistribution.put(country, countryDistribution.getOrDefault(country, 0L) + 1);
+            }
+        }
+
+        // Prepare response data
+        Map<String, Object> analyticsData = new HashMap<>();
+        analyticsData.put("time_range", "weekly");
+        analyticsData.put("timezone", "CST (America/Chicago)");
+        analyticsData.put("clicks_per_week", clicksPerWeek);
+        analyticsData.put("device_distribution", deviceDistribution);
+        analyticsData.put("browser_distribution", browserDistribution);
+        analyticsData.put("country_distribution", countryDistribution);
+        analyticsData.put("total_clicks", clicksPerWeek.values().stream().mapToLong(Long::longValue).sum());
+
+        return analyticsData;
+    }
+
+    /**
+     * Gets monthly analytics data for a short URL for the past 12 months.
+     *
+     * @param shortId The ID of the shortened URL
+     * @return Map containing analytics data organized by months
+     */
+    private Map<String, Object> getMonthlyAnalytics(String shortId) {
+        // Get current date in CST
+        ZonedDateTime currentDate = ZonedDateTime.now(CST_ZONE);
+
+        // Create a map to store clicks per month
+        Map<String, Long> clicksPerMonth = new LinkedHashMap<>();
+
+        // Initialize data for past 12 months (including current month)
+        for (int i = 11; i >= 0; i--) {
+            YearMonth yearMonth = YearMonth.from(currentDate.minusMonths(i));
+            String monthLabel = yearMonth.toString(); // Format: yyyy-MM
+            clicksPerMonth.put(monthLabel, 0L);
+        }
+
+        // Create distributions for aggregated data
+        Map<String, Long> deviceDistribution = new HashMap<>();
+        deviceDistribution.put("Desktop", 0L);
+        deviceDistribution.put("Mobile", 0L);
+        deviceDistribution.put("Tablet", 0L);
+
+        Map<String, Long> browserDistribution = new HashMap<>();
+        browserDistribution.put("Chrome", 0L);
+        browserDistribution.put("Firefox", 0L);
+        browserDistribution.put("Safari", 0L);
+        browserDistribution.put("Edge", 0L);
+        browserDistribution.put("Internet Explorer", 0L);
+        browserDistribution.put("Other", 0L);
+
+        Map<String, Long> countryDistribution = new HashMap<>();
+        countryDistribution.put("United States", 0L);
+        countryDistribution.put("China", 0L);
+        countryDistribution.put("India", 0L);
+        countryDistribution.put("United Kingdom", 0L);
+        countryDistribution.put("Germany", 0L);
+        countryDistribution.put("Unknown", 0L);
+
+        // Calculate start of the period (12 months ago, first day of that month)
+        ZonedDateTime startOfPeriod = currentDate.minusMonths(12)
+                .withDayOfMonth(1)
+                .truncatedTo(ChronoUnit.DAYS);
+
+        // Get all click data for the shortId
+        List<Map<String, String>> allClickData = bigtableRepository.getClickData(shortId);
+
+        // Process each click
+        for (Map<String, String> click : allClickData) {
+            ZonedDateTime clickTime;
+            try {
+                String timestampStr = click.get("timestamp");
+
+                if (timestampStr.endsWith("Z")) {
+                    Instant instant = Instant.parse(timestampStr);
+                    clickTime = instant.atZone(CST_ZONE);
+                } else {
+                    try {
+                        clickTime = ZonedDateTime.parse(timestampStr);
+                    } catch (DateTimeParseException e) {
+                        try {
+                            OffsetDateTime offsetDateTime = OffsetDateTime.parse(timestampStr);
+                            clickTime = offsetDateTime.atZoneSameInstant(CST_ZONE);
+                        } catch (DateTimeParseException ex) {
+                            LocalDateTime localDateTime = LocalDateTime.parse(timestampStr,
+                                    DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                            clickTime = localDateTime.atZone(CST_ZONE);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                continue; // Skip if timestamp can't be parsed
+            }
+
+            // Skip if the click is before the start of our 12-month period
+            if (clickTime.isBefore(startOfPeriod)) {
+                continue;
+            }
+
+            // Find which month this click belongs to
+            YearMonth yearMonth = YearMonth.from(clickTime);
+            String monthLabel = yearMonth.toString();
+
+            // Increment the count for this month
+            if (clicksPerMonth.containsKey(monthLabel)) {
+                clicksPerMonth.put(monthLabel, clicksPerMonth.get(monthLabel) + 1);
+            }
+
+            // Aggregate distribution data
+            String device = click.get("device_type");
+            deviceDistribution.put(device, deviceDistribution.getOrDefault(device, 0L) + 1);
+
+            String browser = click.get("browser");
+            if (browserDistribution.containsKey(browser)) {
+                browserDistribution.put(browser, browserDistribution.get(browser) + 1);
+            } else {
+                browserDistribution.put("Other", browserDistribution.get("Other") + 1);
+            }
+
+            String country = click.get("country");
+            if (country == null || country.isEmpty() || country.equals("Unknown")) {
+                countryDistribution.put("Unknown", countryDistribution.getOrDefault("Unknown", 0L) + 1);
+            } else {
+                countryDistribution.put(country, countryDistribution.getOrDefault(country, 0L) + 1);
+            }
+        }
+
+        // Prepare response data
+        Map<String, Object> analyticsData = new HashMap<>();
+        analyticsData.put("time_range", "monthly");
+        analyticsData.put("timezone", "CST (America/Chicago)");
+        analyticsData.put("clicks_per_month", clicksPerMonth);
+        analyticsData.put("device_distribution", deviceDistribution);
+        analyticsData.put("browser_distribution", browserDistribution);
+        analyticsData.put("country_distribution", countryDistribution);
+        analyticsData.put("total_clicks", clicksPerMonth.values().stream().mapToLong(Long::longValue).sum());
 
         return analyticsData;
     }
