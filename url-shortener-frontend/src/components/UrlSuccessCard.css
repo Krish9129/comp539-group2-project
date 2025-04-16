@@ -1,0 +1,280 @@
+/* UrlSuccessCard.css */
+
+/* Share button styles */
+.share-btn {
+  transition: all 0.2s ease;
+}
+
+.share-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Share dropdown container */
+.share-dropdown-container {
+  position: relative;
+}
+
+/* Share dropdown styles */
+.share-dropdown {
+  min-width: 200px;
+  padding: 0;
+  border-radius: 12px;
+  border: none;
+  overflow: hidden;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+  animation: dropdown-fade 0.2s ease-in-out;
+}
+
+@keyframes dropdown-fade {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Share dropdown header */
+.share-dropdown-header {
+  background-color: #f8f9fa;
+  padding: 10px 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.share-dropdown-header h6 {
+  color: #6c757d;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/* Share option styles */
+.share-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  transition: background-color 0.2s ease;
+}
+
+.share-item:hover {
+  background-color: #f8f9fa;
+}
+
+.share-item:active {
+  background-color: #e9ecef;
+}
+
+/* Share icon styles */
+.share-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  color: white;
+}
+
+/* Twitter icon */
+.twitter-icon {
+  background: linear-gradient(45deg, #1da1f2, #0d8ecf);
+}
+
+/* LinkedIn icon */
+.linkedin-icon {
+  background: linear-gradient(45deg, #0077b5, #0e6795);
+}
+
+/* Reddit icon */
+.reddit-icon {
+  background: linear-gradient(45deg, #ff4500, #e03d00);
+}
+
+/* Success card animation */
+.success-card {
+  animation: card-appear 0.3s ease-in-out;
+}
+
+@keyframes card-appear {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* QR code modal animation */
+.qr-modal .modal-content {
+  animation: modal-slide-in 0.3s ease-out;
+}
+
+@keyframes modal-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Success icon circle */
+.success-icon-circle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* URL Share container */
+.url-share-container {
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+/* Social platforms title */
+.social-platforms-title {
+  text-align: center;
+  position: relative;
+  margin: 20px 0;
+}
+
+.social-platforms-title span {
+  background-color: white;
+  padding: 0 15px;
+  position: relative;
+  z-index: 2;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.social-platforms-title::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background-color: #e9ecef;
+  z-index: 1;
+}
+
+/* Share buttons container */
+.share-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+/* Share platform button */
+.share-platform-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 15px 20px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  flex: 1;
+  min-width: 100px;
+  border: 1px solid #eaeaea;
+}
+
+.share-platform-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+}
+
+.share-platform-btn span {
+  margin-top: 8px;
+  font-size: 14px;
+}
+
+/* Platform icon container */
+.share-platform-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  margin-bottom: 5px;
+  color: white;
+}
+
+/* LinkedIn button */
+.linkedin-btn:hover {
+  background-color: #f0f7fc;
+  border-color: #0077b5;
+}
+
+.linkedin-btn .share-platform-icon {
+  background: linear-gradient(45deg, #0077b5, #0e6795);
+}
+
+/* Reddit button */
+.reddit-btn:hover {
+  background-color: #fff8f5;
+  border-color: #ff4500;
+}
+
+.reddit-btn .share-platform-icon {
+  background: linear-gradient(45deg, #ff4500, #e03d00);
+}
+
+/* Twitter/X button */
+.twitter-btn:hover {
+  background-color: #f8f9fa;
+  border-color: #222222;
+}
+
+.twitter-btn .share-platform-icon {
+  background: linear-gradient(45deg, #000000, #333333);
+}
+
+/* Modal title styles */
+.share-modal .modal-title {
+  font-weight: 600;
+}
+
+/* Modal header styles */
+.share-modal .modal-header {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+/* Copy link button styles */
+.url-share-container .input-group .btn {
+  min-width: 100px;
+  transition: all 0.2s ease;
+}
+
+/* Additional responsive styles */
+@media (max-width: 576px) {
+  .share-buttons {
+    flex-direction: column;
+  }
+  
+  .share-platform-btn {
+    width: 100%;
+    flex-direction: row;
+    justify-content: flex-start;
+  }
+  
+  .share-platform-btn span {
+    margin-top: 0;
+    margin-left: 10px;
+  }
+} 

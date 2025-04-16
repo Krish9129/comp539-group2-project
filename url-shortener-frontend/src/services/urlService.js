@@ -88,14 +88,15 @@ const urlService = {
   },
   
   // Get URL analytics data
-  getUrlAnalytics: async (shortId, date) => {
+  getUrlAnalytics: async (shortId, date, timeRange = 'daily') => {
     try {
       // Ensure date is properly encoded
       const encodedDate = encodeURIComponent(date);
       console.log("Encoded date for API request:", encodedDate);
+      console.log("Time range for API request:", timeRange);
       
-      // Make the API request with the date parameter
-      const response = await apiClient.get(`/${shortId}/analytics?date=${encodedDate}`);
+      // Make the API request with the date parameter and timeRange
+      const response = await apiClient.get(`/${shortId}/analytics?date=${encodedDate}&timeRange=${timeRange}`);
       
       console.log("Analytics API response:", response.data);
       return response.data;
